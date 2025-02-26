@@ -1,0 +1,19 @@
+{
+  "title": "Deno WPPConnect",
+  "description": "Deno WPPConnect is a Deno-based implementation of the WPPConnect library.",
+  "license": "MIT",
+  "tasks": {
+    "start": "deno run --watch server.ts",
+    "dev": "deno run --watch -A server.ts",
+    "check": "deno fmt --check && deno lint && deno check **/*.ts",
+    "docker:build": "docker build -t wpp-api .",
+    "docker:save": "docker save -o wpp-api.tar wpp-api"
+  },
+  "imports": {
+    "@deno-library/logger": "jsr:@deno-library/logger@^1.1.9",
+    "@hono": "jsr:@hono/hono@^4.7.1",
+    "@std/fmt": "jsr:@std/fmt@^1.0.5",
+    "@wppconnect-team/wppconnect": "npm:@wppconnect-team/wppconnect@^1.35.2"
+  },
+  "nodeModulesDir": "auto"
+}

@@ -1,0 +1,8 @@
+// Node modules folder
+node_modules/*
+
+// Tokens folder
+tokens/*
+
+// Zed
+.zed/*
