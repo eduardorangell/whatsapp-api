@@ -6,3 +6,9 @@ tokens/*
 
 // Zed
 .zed/*
+
+// git
+.git/*
+
+// gitignore
+.gitignore

@@ -3,20 +3,26 @@
 Servidor REST API para automatizar certas funções do WhatsApp.
 
 ## Como usar
-Inicie o servidor usando o comando `deno task dev` e leia o qr code com o celular.
+
+Inicie o servidor usando o comando `deno task dev` e leia o qr code com o
+celular.
 
 ## Utilizando com Docker
+
 Você pode iniciar uma instância do servidor usando o Docker:
 
 ```bash
 docker run -p 3000:3000 -e WAIT_FOR_LOGIN=true -e HEADLESS=false -e USE_CHROME=true -e AUTO_CLOSE=90000 wpp-api
 ```
 
-É possível também utilizando o arquivo docker-compose. Um arquivo de exemplo pode ser encontrado na raiz do projeto. Antes de usar é necessário criar a imagem do Docker:
+É possível também utilizando o arquivo docker-compose. Um arquivo de exemplo
+pode ser encontrado na raiz do projeto. Antes de usar é necessário criar a
+imagem do Docker:
 
 ```bash
 deno run docker:build
 ```
+
 Em seguida, execute o comando `docker-compose up -d` para iniciar o servidor.
 
 ## Desenvolvimento

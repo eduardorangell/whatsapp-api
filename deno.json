@@ -3,8 +3,8 @@
   "description": "Deno WPPConnect is a Deno-based implementation of the WPPConnect library.",
   "license": "MIT",
   "tasks": {
-    "start": "deno run --watch server.ts",
-    "dev": "deno run --watch -A server.ts",
+    "start": "deno run --watch src/server.ts",
+    "dev": "deno run --watch -A src/server.ts",
     "check": "deno fmt --check && deno lint && deno check **/*.ts",
     "docker:build": "docker build -t wpp-api .",
     "docker:save": "docker save -o wpp-api.tar wpp-api"
