@@ -1,10 +1,11 @@
 import { Logger } from "@deno-library/logger";
 export const logger = new Logger();
 
+const env = Deno.env.toObject();
 export default () => ({
-  PORT: parseInt(Deno.env.get("PORT") || "3000"),
-  WAIT_FOR_LOGIN: Deno.env.get("WAIT_FOR_LOGIN") === "true" ? true : false,
-  HEADLESS: Deno.env.get("HEADLESS") === "false" ? false : true,
-  USE_CHROME: Deno.env.get("USE_CHROME") === "true" ? true : false,
-  AUTO_CLOSE: parseInt(Deno.env.get("AUTO_CLOSE") || "90000"),
+  PORT: parseInt(env.PORT || "3000"),
+  WAIT_FOR_LOGIN: env.WAIT_FOR_LOGIN === "true" ? true : false,
+  HEADLESS: env.HEADLESS === "false" ? false : true,
+  USE_CHROME: env.USE_CHROME === "true" ? true : false,
+  AUTO_CLOSE: parseInt(env.AUTO_CLOSE || "90000"),
 });
