@@ -47,10 +47,11 @@ export HEADLESS=true && deno task dev
 
 ## Variáveis
 
-| Nome           | Descrição                           | Valor padrão |
-| -------------- | ----------------------------------- | ------------ |
-| PORT           | Porta de execução do servidor       | 3000         |
-| WAIT_FOR_LOGIN | Aguarda o retorno da instância      | false        |
-| HEADLESS       | Ativa ou desativa chrome headless   | true         |
-| USE_CHROME     | Usar Chrome ou Chromium             | false        |
-| AUTO_CLOSE     | Fecha o navegador em x milisegundos | 90000        |
+| Nome             | Descrição                           | Valor padrão |
+| ---------------- | ----------------------------------- | ------------ |
+| PORT             | Porta de execução do servidor       | 3000         |
+| WAIT_FOR_LOGIN   | Aguarda o retorno da instância      | false        |
+| HEADLESS         | Ativa ou desativa chrome headless   | true         |
+| USE_CHROME       | Usar Chrome ou Chromium             | false        |
+| AUTO_CLOSE       | Fecha o navegador em x milisegundos | 90000        |
+| WHATSAPP_VERSION | Versão do WhatsApp                  |              |

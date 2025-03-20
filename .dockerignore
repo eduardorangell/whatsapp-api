@@ -1,14 +1,19 @@
 // Node modules folder
-node_modules/*
+**/node_modules
 
 // Tokens folder
-tokens/*
+**/tokens
 
 // Zed
-.zed/*
+.zed
 
 // git
-.git/*
+.git
 
 // gitignore
 .gitignore
+
+// other files
+wpp-api.tar
+docker-compose.sample.yml
+.dockerignore

@@ -1,33 +1,33 @@
 {
   "version": "4",
   "specifiers": {
-    "jsr:@deno-library/logger@^1.1.9": "1.1.9",
-    "jsr:@hono/hono@^4.7.1": "4.7.1",
+    "jsr:@deno-library/logger@^1.2.0": "1.2.0",
+    "jsr:@hono/hono@^4.7.4": "4.7.4",
     "jsr:@std/fmt@1.0.3": "1.0.3",
-    "jsr:@std/fmt@^1.0.5": "1.0.5",
-    "jsr:@std/fs@^1.0.6": "1.0.11",
+    "jsr:@std/fmt@^1.0.6": "1.0.6",
+    "jsr:@std/fs@^1.0.6": "1.0.14",
     "jsr:@std/path@^1.0.8": "1.0.8",
     "npm:@wppconnect-team/wppconnect@^1.35.2": "1.35.2_puppeteer@23.11.1__devtools-protocol@0.0.1367902_puppeteer-extra@3.3.6__puppeteer@23.11.1___devtools-protocol@0.0.1367902"
   },
   "jsr": {
-    "@deno-library/logger@1.1.9": {
-      "integrity": "f7d7347b3bdf85dd3692b501bb27b11d685c53efd90a07bc6a4d6edd01f8511b",
+    "@deno-library/logger@1.2.0": {
+      "integrity": "c6f0371cb2d08c0a7b82d30d494fac5d25f115695c63a3a295c4e35a0e6669a0",
       "dependencies": [
         "jsr:@std/fmt@1.0.3",
         "jsr:@std/fs"
       ]
     },
-    "@hono/hono@4.7.1": {
-      "integrity": "f75aaf6a026ad05406e60125a70a3d2a77e3b62991f8c4e38c624bdfc1a1dc26"
+    "@hono/hono@4.7.4": {
+      "integrity": "c03c9cbe0fbfc4e51f3fee6502a7903aa4f9ef7c2c98635607b15eee14258825"
     },
     "@std/fmt@1.0.3": {
       "integrity": "97765c16aa32245ff4e2204ecf7d8562496a3cb8592340a80e7e554e0bb9149f"
     },
-    "@std/fmt@1.0.5": {
-      "integrity": "0cfab43364bc36650d83c425cd6d99910fc20c4576631149f0f987eddede1a4d"
+    "@std/fmt@1.0.6": {
+      "integrity": "a2c56a69a2369876ddb3ad6a500bb6501b5bad47bb3ea16bfb0c18974d2661fc"
     },
-    "@std/fs@1.0.11": {
-      "integrity": "ba674672693340c5ebdd018b4fe1af46cb08741f42b4c538154e97d217b55bdd",
+    "@std/fs@1.0.14": {
+      "integrity": "1e84bf0b95fe08f41f1f4aea9717bbf29f45408a56ce073b0114474ce1c9fccf",
       "dependencies": [
         "jsr:@std/path"
       ]
@@ -1600,9 +1600,9 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@deno-library/logger@^1.1.9",
-      "jsr:@hono/hono@^4.7.1",
-      "jsr:@std/fmt@^1.0.5",
+      "jsr:@deno-library/logger@^1.2.0",
+      "jsr:@hono/hono@^4.7.4",
+      "jsr:@std/fmt@^1.0.6",
       "npm:@wppconnect-team/wppconnect@^1.35.2"
     ]
   }

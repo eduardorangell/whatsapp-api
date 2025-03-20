@@ -13,3 +13,5 @@ services:
       - USE_CHROME=true
       - CREATE_PATH_FILE_TOKEN=true
       - WAIT_FOR_LOGIN=true
+      - AUTO_CLOSE=180000
+      - WHATSAPP_VERSION=2.2413.51

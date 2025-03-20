@@ -28,6 +28,7 @@ export class WhatsappService {
       onLoadingScreen: (percent, message) => {
         logger.log("LOADING SCREEN", percent, message);
       },
+      whatsappVersion: env().WHATSAPP_VERSION,
       folderNameToken: "tokens",
       headless: env().HEADLESS,
       devtools: false,

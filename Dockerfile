@@ -17,6 +17,4 @@ COPY . .
 
 RUN deno cache src/server.ts && deno install --allow-scripts=npm:puppeteer@23.11.1,npm:sharp@0.33.5
 
-RUN timeout 10s deno -A src/server.ts || [ $? -eq 124 ] || exit 1
-
-CMD ["run", "--allow-net", "--allow-read", "--allow-write", "--allow-env", "--allow-sys", "--allow-ffi", "--allow-run", "server.ts"]
+CMD ["run", "--allow-net", "--allow-read", "--allow-write", "--allow-env", "--allow-sys", "--allow-ffi", "--allow-run", "src/server.ts"]

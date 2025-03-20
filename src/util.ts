@@ -8,4 +8,5 @@ export default () => ({
   HEADLESS: env.HEADLESS === "false" ? false : true,
   USE_CHROME: env.USE_CHROME === "true" ? true : false,
   AUTO_CLOSE: parseInt(env.AUTO_CLOSE || "90000"),
+  WHATSAPP_VERSION: env.WHATSAPP_VERSION,
 });
