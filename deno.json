@@ -11,9 +11,9 @@
   },
   "imports": {
     "@deno-library/logger": "jsr:@deno-library/logger@^1.2.0",
-    "@hono": "jsr:@hono/hono@^4.7.4",
+    "@hono": "jsr:@hono/hono@^4.7.5",
     "@std/fmt": "jsr:@std/fmt@^1.0.6",
-    "@wppconnect-team/wppconnect": "npm:@wppconnect-team/wppconnect@^1.35.2"
+    "@wppconnect-team/wppconnect": "npm:@wppconnect-team/wppconnect@^1.36.1"
   },
   "nodeModulesDir": "auto"
 }
