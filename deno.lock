@@ -5,9 +5,9 @@
     "jsr:@hono/hono@^4.7.5": "4.7.5",
     "jsr:@std/fmt@1.0.3": "1.0.3",
     "jsr:@std/fmt@^1.0.6": "1.0.6",
-    "jsr:@std/fs@^1.0.6": "1.0.14",
+    "jsr:@std/fs@^1.0.6": "1.0.15",
     "jsr:@std/path@^1.0.8": "1.0.8",
-    "npm:@wppconnect-team/wppconnect@^1.36.1": "1.36.1_puppeteer@23.11.1__devtools-protocol@0.0.1367902_puppeteer-extra@3.3.6__puppeteer@23.11.1___devtools-protocol@0.0.1367902"
+    "npm:@wppconnect-team/wppconnect@^1.36.3": "1.36.3_puppeteer@23.11.1__devtools-protocol@0.0.1367902_puppeteer-extra@3.3.6__puppeteer@23.11.1___devtools-protocol@0.0.1367902"
   },
   "jsr": {
     "@deno-library/logger@1.2.0": {
@@ -26,8 +26,8 @@
     "@std/fmt@1.0.6": {
       "integrity": "a2c56a69a2369876ddb3ad6a500bb6501b5bad47bb3ea16bfb0c18974d2661fc"
     },
-    "@std/fs@1.0.14": {
-      "integrity": "1e84bf0b95fe08f41f1f4aea9717bbf29f45408a56ce073b0114474ce1c9fccf",
+    "@std/fs@1.0.15": {
+      "integrity": "c083fb479889d6440d768e498195c3fc499d426fbf9a6592f98f53884d1d3f41",
       "dependencies": [
         "jsr:@std/path"
       ]
@@ -201,8 +201,8 @@
         "@types/node"
       ]
     },
-    "@wppconnect-team/wppconnect@1.36.1_puppeteer@23.11.1__devtools-protocol@0.0.1367902_puppeteer-extra@3.3.6__puppeteer@23.11.1___devtools-protocol@0.0.1367902": {
-      "integrity": "sha512-R8ho0P00Z55EFDEKUK156Oiu6QQ4mn2wWIZ2H0jFFpRyJTByDt/3FDNlLUyXDf76V3JkjcZ/OvOHgM/qcAdU2Q==",
+    "@wppconnect-team/wppconnect@1.36.3_puppeteer@23.11.1__devtools-protocol@0.0.1367902_puppeteer-extra@3.3.6__puppeteer@23.11.1___devtools-protocol@0.0.1367902": {
+      "integrity": "sha512-0EqXYXduij6xJ3q1iS0Cumu5KYTOdPT9xo+4sprNG4T365HMHq66q1tMtzLfCpAJSdF+DWtWVh/Ddi3zduZOxA==",
       "dependencies": [
         "@img/sharp-win32-x64",
         "@wppconnect/wa-js",
@@ -237,11 +237,11 @@
         "ws"
       ]
     },
-    "@wppconnect/wa-js@3.16.6": {
-      "integrity": "sha512-h3Vu5zxikQu8wrDV0MRoLpZZOR1oVElfNR+nfvL0djOD5Ly8+89FbOyPHsquOEh575xKDpSwQ7tckXJ68trekw=="
+    "@wppconnect/wa-js@3.16.9": {
+      "integrity": "sha512-vFG/aru/Jl8CAltbd1juFRH8UuPanILe3tqRWTh1N2oCGTGc0IliWCYPGQf6O9cLOHXP7d6B0HbzonBGnVocQA=="
     },
-    "@wppconnect/wa-version@1.5.1237": {
-      "integrity": "sha512-+sdzw8od5+ycKsc4EbaTIRy+IXG9BIHogIkwUhqe5UDX2keDHUZu2nqF8KYwzHrncbnqYG3LNV2zzC9QJo1D4w==",
+    "@wppconnect/wa-version@1.5.1244": {
+      "integrity": "sha512-DF5maVfPqm5JXTW+JwZl2k3RuKYOTgtxTbO2H9G3Y7KcpGCAfVZF1ve+YxcNeqUbBD3iaT51ArEsNu7DIgZ3Hw==",
       "dependencies": [
         "node-fetch",
         "semver@7.7.1"
@@ -1685,7 +1685,7 @@
       "jsr:@deno-library/logger@^1.2.0",
       "jsr:@hono/hono@^4.7.5",
       "jsr:@std/fmt@^1.0.6",
-      "npm:@wppconnect-team/wppconnect@^1.36.1"
+      "npm:@wppconnect-team/wppconnect@^1.36.3"
     ]
   }
 }
