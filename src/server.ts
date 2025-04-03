@@ -5,6 +5,7 @@ import { prettyJSON } from "@hono/pretty-json";
 import { compress } from "@hono/compress";
 import { timing } from "@hono/timing";
 import { validator } from "@hono/validator";
+import { z } from "zod";
 import { bold, cyan, yellow } from "@std/fmt/colors";
 
 import { WhatsappService } from "./whatsapp.ts";
@@ -59,14 +60,14 @@ app.use(logger(customLogger));
 app.post(
   "/numero-valido",
   validator("json", (value, c) => {
-    // deno-lint-ignore no-explicit-any
-    const isExactNumeroValido = (obj: any): obj is { phone: string } =>
-      Object.keys(obj).length === 1 && obj.phone?.constructor === String;
-
-    if (!isExactNumeroValido(value)) {
+    const schema = z.object({
+      phone: z.string().min(10).max(16),
+    });
+    const parsed = schema.safeParse(value);
+    if (!parsed.success) {
       return c.text("Número inválido", 400);
     }
-    return value;
+    return parsed.data;
   }),
   async (c) => {
     const body = c.req.valid("json");
@@ -80,18 +81,16 @@ app.post(
 app.post(
   "/enviar-mensagem",
   validator("json", (value, c) => {
-    const isExactEnviarMensagem = (
-      // deno-lint-ignore no-explicit-any
-      obj: any,
-    ): obj is { phone: string; texto: string } =>
-      Object.keys(obj).length === 2 &&
-      obj.phone?.constructor === String &&
-      obj.texto?.constructor === String;
+    const schema = z.object({
+      phone: z.string().min(10).max(16), //+55 62 985816374
+      texto: z.string().min(1).max(10000),
+    });
+    const parsed = schema.safeParse(value);
 
-    if (!isExactEnviarMensagem(value)) {
+    if (!parsed.success) {
       return c.text("Inválido", 400);
     }
-    return value;
+    return parsed.data;
   }),
   async (c) => {
     const body = c.req.valid("json");
@@ -104,19 +103,19 @@ app.post(
 app.post(
   "/enviar-imagem",
   validator("json", (value, c) => {
-    const isExactEnviarImagem = (
-      // deno-lint-ignore no-explicit-any
-      obj: any,
-    ): obj is { phone: string; imagem: string; legenda: string } =>
-      Object.keys(obj).length === 3 &&
-      obj.phone?.constructor === String &&
-      obj.imagem?.constructor === String &&
-      obj.legenda?.constructor === String;
+    const schema = z.object({
+      phone: z.string().min(10).max(16),
+      imagem: z.string().min(1),
+      legenda: z.string().min(1).max(1000),
+    });
 
-    if (!isExactEnviarImagem(value)) {
+    const parsed = schema.safeParse(value);
+
+    if (!parsed.success) {
       return c.text("Inválido", 400);
     }
-    return value;
+
+    return parsed.data;
   }),
   async (c) => {
     const body = c.req.valid("json");
