@@ -13,7 +13,7 @@
     "@deno-library/logger": "jsr:@deno-library/logger@^1.2.0",
     "@hono": "jsr:@hono/hono@^4.7.5",
     "@std/fmt": "jsr:@std/fmt@^1.0.6",
-    "@wppconnect-team/wppconnect": "npm:@wppconnect-team/wppconnect@^1.36.4",
+    "@wppconnect-team/wppconnect": "npm:@wppconnect-team/wppconnect@^1.37.0",
     "zod": "npm:zod@^3.24.2"
   },
   "nodeModulesDir": "auto"

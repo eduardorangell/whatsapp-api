@@ -2,12 +2,12 @@
   "version": "4",
   "specifiers": {
     "jsr:@deno-library/logger@^1.2.0": "1.2.0",
-    "jsr:@hono/hono@^4.7.5": "4.7.5",
+    "jsr:@hono/hono@^4.7.5": "4.7.6",
     "jsr:@std/fmt@1.0.3": "1.0.3",
     "jsr:@std/fmt@^1.0.6": "1.0.6",
     "jsr:@std/fs@^1.0.6": "1.0.15",
     "jsr:@std/path@^1.0.8": "1.0.8",
-    "npm:@wppconnect-team/wppconnect@^1.36.4": "1.36.4_puppeteer@23.11.1__devtools-protocol@0.0.1367902_puppeteer-extra@3.3.6__puppeteer@23.11.1___devtools-protocol@0.0.1367902",
+    "npm:@wppconnect-team/wppconnect@^1.37.0": "1.37.0_puppeteer@23.11.1__devtools-protocol@0.0.1367902_puppeteer-extra@3.3.6__puppeteer@23.11.1___devtools-protocol@0.0.1367902",
     "npm:zod@^3.24.2": "3.24.2"
   },
   "jsr": {
@@ -18,8 +18,8 @@
         "jsr:@std/fs"
       ]
     },
-    "@hono/hono@4.7.5": {
-      "integrity": "36a7e1b3db8a58e5dc2bd36a76be53346f0966e04c24c635c4d6f58875575b0a"
+    "@hono/hono@4.7.6": {
+      "integrity": "407da752c13d4644bb9d363f8349db7542e21abc3db8c13ca90cf69d8ab675ad"
     },
     "@std/fmt@1.0.3": {
       "integrity": "97765c16aa32245ff4e2204ecf7d8562496a3cb8592340a80e7e554e0bb9149f"
@@ -60,8 +60,8 @@
         "kuler"
       ]
     },
-    "@emnapi/runtime@1.4.0": {
-      "integrity": "sha512-64WYIf4UYcdLnbKn/umDlNjQDSS8AgZrI/R9+x5ilkUVFxXcA1Ebl+gQLc/6mERA4407Xof0R7wEyEuj091CVw==",
+    "@emnapi/runtime@1.4.1": {
+      "integrity": "sha512-LMshMVP0ZhACNjQNYXiU1iZJ6QCcv0lUdPDPugqGvCGXt5xtRVBPdtA0qU12pEXZzpWAhWlZYptfdAFq10DOVQ==",
       "dependencies": [
         "tslib"
       ]
@@ -202,8 +202,8 @@
         "@types/node"
       ]
     },
-    "@wppconnect-team/wppconnect@1.36.4_puppeteer@23.11.1__devtools-protocol@0.0.1367902_puppeteer-extra@3.3.6__puppeteer@23.11.1___devtools-protocol@0.0.1367902": {
-      "integrity": "sha512-DHHki14C/rBTRJQmDO8FSM0o4UCnUt/pZWajh1s9Q5pjtI3X5HQN9doxQMRvL4TFaGc34UiPJg/IrZBlqc4p5Q==",
+    "@wppconnect-team/wppconnect@1.37.0_puppeteer@23.11.1__devtools-protocol@0.0.1367902_puppeteer-extra@3.3.6__puppeteer@23.11.1___devtools-protocol@0.0.1367902": {
+      "integrity": "sha512-SzoqCr1qXJXbhqK7wGPMHpPwNj7wTMtD0aQC5lFnUhn83kcEgWAMoSsw3SqmLmcUvmfLMMgu2bQYR8M0zCdk8A==",
       "dependencies": [
         "@img/sharp-win32-x64",
         "@wppconnect/wa-js",
@@ -238,11 +238,11 @@
         "ws"
       ]
     },
-    "@wppconnect/wa-js@3.17.0": {
-      "integrity": "sha512-boObChl2tjy625ssbNOhwKHIzMrGJS9oYbZOKMwEwztkFjjaIihA0hSOUz2xOw802/xNxO7V1tQdZK7YiLdS0g=="
+    "@wppconnect/wa-js@3.17.1": {
+      "integrity": "sha512-z7Kv2y2Y93u6bMyTJs/g0DXUiibbVyLUQf6AuCoBZ+jVETGumGZuXC1v7ChmvaFovwPXoy0PWWc2bpoSU196Og=="
     },
-    "@wppconnect/wa-version@1.5.1270": {
-      "integrity": "sha512-JxnopSccbPRSQDKzyNHpedSamSb0nggCostGKN42hCHPMs+Da7fQwhOD6WFgRRjuf6wiBKeZOek/qyMv3EmOGQ==",
+    "@wppconnect/wa-version@1.5.1356": {
+      "integrity": "sha512-2T2fRj0paKyxNy3jY7zDQinLOMuafeDpDLIFZoQ7/JgvXjdGz0kaERGyYKY6OT4RnejEqCQ8udppa8diSfsNgw==",
       "dependencies": [
         "node-fetch",
         "semver@7.7.1"
@@ -310,8 +310,8 @@
     "bare-events@2.5.4": {
       "integrity": "sha512-+gFfDkR8pj4/TrWCGUGWmJIkBwuxPS5F+a5yWjOHQt2hHvNZd5YLzadjmDUtFmMM4y429bnKLa8bYBMHcYdnQA=="
     },
-    "bare-fs@4.0.2_bare-events@2.5.4": {
-      "integrity": "sha512-S5mmkMesiduMqnz51Bfh0Et9EX0aTCJxhsI4bvzFFLs8Z1AV8RDHadfY5CyLwdoLHgXbNBEN1gQcbEtGwuvixw==",
+    "bare-fs@4.1.2_bare-events@2.5.4": {
+      "integrity": "sha512-8wSeOia5B7LwD4+h465y73KOdj5QHsbbuoUfPBi+pXgFJIPuG7SsiOdJuijWMyfid49eD+WivpfY7KT8gbAzBA==",
       "dependencies": [
         "bare-events",
         "bare-path",
@@ -1030,8 +1030,8 @@
     "lru-cache@7.18.3": {
       "integrity": "sha512-jumlc0BIUrS3qJGgIkWZsyfAM7NCWiBcCDhnd+3NNM5KbBmLTgHVfWBcg6W+rLUsIpzpERPsvwUP7CckAQSOoA=="
     },
-    "marky@1.2.5": {
-      "integrity": "sha512-q9JtQJKjpsVxCRVgQ+WapguSbKC3SQ5HEzFGPAJMStgh3QjCawp00UKv3MTTAArTmGmmPUvllHZoNbZ3gs0I+Q=="
+    "marky@1.3.0": {
+      "integrity": "sha512-ocnPZQLNpvbedwTy9kNrQEsknEfgvcLMvOtz3sFeWApDq1MXH1TqkCIx58xlpESsfwQOnuBO9beyQuNGzVvuhQ=="
     },
     "math-intrinsics@1.1.0": {
       "integrity": "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g=="
@@ -1689,7 +1689,7 @@
       "jsr:@deno-library/logger@^1.2.0",
       "jsr:@hono/hono@^4.7.5",
       "jsr:@std/fmt@^1.0.6",
-      "npm:@wppconnect-team/wppconnect@^1.36.4",
+      "npm:@wppconnect-team/wppconnect@^1.37.0",
       "npm:zod@^3.24.2"
     ]
   }
