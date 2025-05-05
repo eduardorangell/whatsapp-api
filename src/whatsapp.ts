@@ -12,14 +12,16 @@ export class WhatsappService {
   private initWhatsapp() {
     create({
       session: "suporte",
-      catchQR: (base64Qrimg, asciiQR, attempts, urlCode) => {
+      phoneNumber: env().PHONE_NUMBER,
+      catchLinkCode: (linkCode) => {
+        logger.log("Link code: ", linkCode);
+      },
+      catchQR: (_base64Qrimg, asciiQR, attempts, _urlCode) => {
         logger.log(
           "Number of attempts to read the qrcode: ",
           attempts,
         );
-        logger.log("Terminal qrcode: ", asciiQR);
-        logger.log("base64 image string qrcode: ", base64Qrimg);
-        logger.log("urlCode (data-ref): ", urlCode);
+        logger.log(`Terminal qrcode: \n${asciiQR}`);
       },
       statusFind: (statusSession, session) => {
         logger.log("Status Session: ", statusSession);
@@ -62,7 +64,7 @@ export class WhatsappService {
       puppeteerOptions: {
         headless: "shell",
       },
-      logQR: true,
+      logQR: env().LOG_QR,
       disableWelcome: true,
       updatesLog: true,
       autoClose: env().AUTO_CLOSE,
@@ -102,8 +104,7 @@ export class WhatsappService {
 
   /**
    * @description Valida se o número é válido
-   * @param phone
-   * @type string
+   * @param phone - string
    * @returns object
    */
   public async validNumber(phone: string) {

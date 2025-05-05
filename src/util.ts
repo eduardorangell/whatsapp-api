@@ -9,4 +9,6 @@ export default () => ({
   USE_CHROME: env.USE_CHROME === "true" ? true : false,
   AUTO_CLOSE: parseInt(env.AUTO_CLOSE || "90000"),
   WHATSAPP_VERSION: env.WHATSAPP_VERSION,
+  LOG_QR: env.LOG_QR === "true" ? true : false,
+  PHONE_NUMBER: env.PHONE_NUMBER,
 });
