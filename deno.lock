@@ -2,13 +2,13 @@
   "version": "5",
   "specifiers": {
     "jsr:@deno-library/logger@^1.2.0": "1.2.0",
-    "jsr:@hono/hono@^4.7.8": "4.7.8",
+    "jsr:@hono/hono@^4.7.10": "4.7.10",
     "jsr:@std/fmt@1.0.3": "1.0.3",
-    "jsr:@std/fmt@^1.0.7": "1.0.7",
+    "jsr:@std/fmt@^1.0.8": "1.0.8",
     "jsr:@std/fs@^1.0.6": "1.0.15",
     "jsr:@std/path@^1.0.8": "1.0.8",
     "npm:@wppconnect-team/wppconnect@^1.37.1": "1.37.1_puppeteer@23.11.1__devtools-protocol@0.0.1367902_puppeteer-extra@3.3.6__puppeteer@23.11.1___devtools-protocol@0.0.1367902",
-    "npm:zod@^3.24.4": "3.24.4"
+    "npm:zod@^3.25.20": "3.25.20"
   },
   "jsr": {
     "@deno-library/logger@1.2.0": {
@@ -18,14 +18,14 @@
         "jsr:@std/fs"
       ]
     },
-    "@hono/hono@4.7.8": {
-      "integrity": "620b1eaab065196d4ebe02cff31f8d3a78c94f736ce2ca86ee14f5f26fe48ecd"
+    "@hono/hono@4.7.10": {
+      "integrity": "e59029e252af371abe43e8e4f9a115e38974c6bd5972022372bf89f763269cc7"
     },
     "@std/fmt@1.0.3": {
       "integrity": "97765c16aa32245ff4e2204ecf7d8562496a3cb8592340a80e7e554e0bb9149f"
     },
-    "@std/fmt@1.0.7": {
-      "integrity": "2a727c043d8df62cd0b819b3fb709b64dd622e42c3b1bb817ea7e6cc606360fb"
+    "@std/fmt@1.0.8": {
+      "integrity": "71e1fc498787e4434d213647a6e43e794af4fd393ef8f52062246e06f7e372b7"
     },
     "@std/fs@1.0.15": {
       "integrity": "c083fb479889d6440d768e498195c3fc499d426fbf9a6592f98f53884d1d3f41",
@@ -1773,17 +1773,17 @@
     "zod@3.23.8": {
       "integrity": "sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g=="
     },
-    "zod@3.24.4": {
-      "integrity": "sha512-OdqJE9UDRPwWsrHjLN2F8bPxvwJBK22EHLWtanu0LSYr5YqzsaaW3RMgmjwr8Rypg5k+meEJdSPXJZXE/yqOMg=="
+    "zod@3.25.20": {
+      "integrity": "sha512-z03fqpTMDF1G02VLKUMt6vyACE7rNWkh3gpXVHgPTw28NPtDFRGvcpTtPwn2kMKtQ0idtYJUTxchytmnqYswcw=="
     }
   },
   "workspace": {
     "dependencies": [
       "jsr:@deno-library/logger@^1.2.0",
-      "jsr:@hono/hono@^4.7.8",
-      "jsr:@std/fmt@^1.0.7",
+      "jsr:@hono/hono@^4.7.10",
+      "jsr:@std/fmt@^1.0.8",
       "npm:@wppconnect-team/wppconnect@^1.37.1",
-      "npm:zod@^3.24.4"
+      "npm:zod@^3.25.20"
     ]
   }
 }

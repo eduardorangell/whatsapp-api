@@ -56,6 +56,40 @@ const customLogger = (...rest: string[]) => {
 };
 app.use(logger(customLogger));
 
+// Inicia instância do whatsapp
+app.post(
+  "/iniciar",
+  validator("json", (value, c) => {
+    const schema = z.object({
+      phone: z.string().min(10).max(16).optional(),
+    });
+    const parsed = schema.safeParse(value);
+    if (!parsed.success) {
+      return c.json({
+        error: parsed.error,
+      }, 400);
+    }
+    return parsed.data;
+  }),
+  async (c) => {
+    const body = c.req.valid("json");
+    const result = await wppservice.initWhatsapp(body.phone);
+    return c.json({ status: result });
+  },
+);
+
+// Finaliza instância do whatsapp
+app.post("/fechar", async (c) => {
+  const result = await wppservice.closeWhatsapp();
+  return c.json({ finalizado: result });
+});
+
+// Checa status do serviço Whatsapp
+app.get("/status", async (c) => {
+  const status = await wppservice.getStatus();
+  return c.json(status);
+});
+
 // Valida número
 app.post(
   "/numero-valido",
@@ -65,13 +99,14 @@ app.post(
     });
     const parsed = schema.safeParse(value);
     if (!parsed.success) {
-      return c.text("Número inválido", 400);
+      return c.json({
+        error: parsed.error,
+      }, 400);
     }
     return parsed.data;
   }),
   async (c) => {
     const body = c.req.valid("json");
-    console.log(body);
     const resultado = await wppservice.validNumber(body.phone);
     return c.json(resultado);
   },
@@ -88,7 +123,9 @@ app.post(
     const parsed = schema.safeParse(value);
 
     if (!parsed.success) {
-      return c.text("Inválido", 400);
+      return c.json({
+        error: parsed.error,
+      }, 400);
     }
     return parsed.data;
   }),
@@ -112,7 +149,9 @@ app.post(
     const parsed = schema.safeParse(value);
 
     if (!parsed.success) {
-      return c.text("Inválido", 400);
+      return c.json({
+        error: parsed.error,
+      }, 400);
     }
 
     return parsed.data;
@@ -132,7 +171,7 @@ Deno.serve(
   {
     onListen(localAddr) {
       console.log(
-        `${bold(yellow("Server is running on:"))} ${
+        `${bold(yellow("Servidor rodando em:"))} ${
           cyan(`http://${localAddr.hostname}:${localAddr.port}`)
         }`,
       );

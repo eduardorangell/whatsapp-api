@@ -4,92 +4,99 @@ import env, { logger } from "./util.ts";
 
 export class WhatsappService {
   private exportedClient!: Whatsapp;
+  private initialized: boolean = false;
 
-  constructor() {
-    this.initWhatsapp();
-  }
+  constructor() {}
 
-  private initWhatsapp() {
-    create({
-      session: "suporte",
-      phoneNumber: env().PHONE_NUMBER,
-      catchLinkCode: (linkCode) => {
-        logger.log("Link code: ", linkCode);
-      },
-      catchQR: (_base64Qrimg, asciiQR, attempts, _urlCode) => {
-        logger.log(
-          "Number of attempts to read the qrcode: ",
-          attempts,
-        );
-        logger.log(`Terminal qrcode: \n${asciiQR}`);
-      },
-      statusFind: (statusSession, session) => {
-        logger.log("Status Session: ", statusSession);
-        logger.log("Session name: ", session);
-      },
-      onLoadingScreen: (percent, message) => {
-        logger.log("LOADING SCREEN", percent, message);
-      },
-      whatsappVersion: env().WHATSAPP_VERSION,
-      folderNameToken: "tokens",
-      headless: env().HEADLESS,
-      devtools: false,
-      useChrome: env().USE_CHROME,
-      debug: false,
-      browserWS: "",
-      browserArgs: [
-        "--disable-web-security",
-        "--no-sandbox",
-        "--disable-web-security",
-        "--aggressive-cache-discard",
-        "--disable-cache",
-        "--disable-application-cache",
-        "--disable-offline-load-stale-cache",
-        "--disk-cache-size=0",
-        "--disable-background-networking",
-        "--disable-default-apps",
-        "--disable-extensions",
-        "--disable-sync",
-        "--disable-translate",
-        "--hide-scrollbars",
-        "--metrics-recording-only",
-        "--mute-audio",
-        "--no-first-run",
-        "--safebrowsing-disable-auto-update",
-        "--ignore-certificate-errors",
-        "--ignore-ssl-errors",
-        "--ignore-certificate-errors-spki-list",
-        "--disable-features=LeakyPeeker",
-      ],
-      puppeteerOptions: {
-        headless: "shell",
-      },
-      logQR: env().LOG_QR,
-      disableWelcome: true,
-      updatesLog: true,
-      autoClose: env().AUTO_CLOSE,
-      waitForLogin: env().WAIT_FOR_LOGIN,
-    }).then((client) => {
-      // Exportando client para uma variável privada a classe
-      this.exportedClient = client;
-
-      // Respostas para chamadas
-      client.onStateChange((state) => {
-        logger.log("State changed: ", state);
-        if ("CONFLICT".includes(state)) client.useHere();
-        if ("UNPAIRED".includes(state)) logger.log("logout");
+  /**
+   * @description Inicia a instância Whatsapp
+   * @param phoneNumber?: string sendo uma string opcional
+   * @return string
+   */
+  public async initWhatsapp(phoneNumber?: string): Promise<string> {
+    if (this.initialized) {
+      return "Instância já inicializada";
+    } else {
+      this.exportedClient = await create({
+        session: "suporte",
+        phoneNumber: phoneNumber,
+        catchLinkCode: (linkCode) => {
+          logger.log("Link code: ", linkCode);
+        },
+        catchQR: (_base64Qrimg, asciiQR, attempts, _urlCode) => {
+          logger.log(
+            "Number of attempts to read the qrcode: ",
+            attempts,
+          );
+          logger.log(`Terminal qrcode: \n${asciiQR}`);
+        },
+        statusFind: (statusSession, session) => {
+          logger.log("Status Session: ", statusSession);
+          logger.log("Session name: ", session);
+        },
+        onLoadingScreen: (percent, message) => {
+          logger.log("LOADING SCREEN", percent, message);
+        },
+        whatsappVersion: env().WHATSAPP_VERSION,
+        folderNameToken: "tokens",
+        headless: env().HEADLESS,
+        devtools: false,
+        useChrome: env().USE_CHROME,
+        debug: false,
+        browserWS: "",
+        browserArgs: [
+          "--disable-web-security",
+          "--no-sandbox",
+          "--disable-web-security",
+          "--aggressive-cache-discard",
+          "--disable-cache",
+          "--disable-application-cache",
+          "--disable-offline-load-stale-cache",
+          "--disk-cache-size=0",
+          "--disable-background-networking",
+          "--disable-default-apps",
+          "--disable-extensions",
+          "--disable-sync",
+          "--disable-translate",
+          "--hide-scrollbars",
+          "--metrics-recording-only",
+          "--mute-audio",
+          "--no-first-run",
+          "--safebrowsing-disable-auto-update",
+          "--ignore-certificate-errors",
+          "--ignore-ssl-errors",
+          "--ignore-certificate-errors-spki-list",
+          "--disable-features=LeakyPeeker",
+        ],
+        puppeteerOptions: {
+          headless: "shell",
+        },
+        logQR: env().LOG_QR,
+        disableWelcome: true,
+        updatesLog: true,
+        autoClose: env().AUTO_CLOSE,
+        waitForLogin: env().WAIT_FOR_LOGIN,
       });
 
-      // Função para responder a tentativas de chamada
-      client.onIncomingCall((call) => {
+      // Alteração de estado de conexão
+      this.exportedClient.onStateChange((state) => {
+        logger.log("State changed: ", state);
+        if ("CONFLICT".includes(state)) this.exportedClient.useHere();
+        if ("UNPAIRED".includes(state)) logger.log("logout");
+        if ("CONNECTED".includes(state)) this.initialized = true;
+      });
+
+      // Reposta de chamada
+      this.exportedClient.onIncomingCall((call) => {
         logger.log(call);
-        client.sendText(
+        this.exportedClient.sendText(
           call.peerJid,
           "Me desculpe, eu ainda não posso receber ligações",
         );
       });
+
       const exitHandler = async () => {
-        await client.close();
+        await this.exportedClient.close();
         logger.log(`${bold(red("Client closed"))}`);
         Deno.exit(0); // Ensure process exits cleanly
       };
@@ -97,13 +104,24 @@ export class WhatsappService {
       // Handle termination signals
       Deno.addSignalListener("SIGINT", exitHandler); // Ctrl+C
       Deno.addSignalListener("SIGTERM", exitHandler); // System termination
-    }).catch((error) => {
-      logger.error(error);
-    });
+
+      return new Promise((resolve) => {
+        if (this.initialized) {
+          resolve("Inicializado");
+        } else {
+          const checkInterval = setInterval(() => {
+            if (this.initialized) {
+              clearInterval(checkInterval);
+              resolve("Inicializado");
+            }
+          }, 1000); // Check every second
+        }
+      });
+    }
   }
 
   /**
-   * @description Valida se o número é válido
+   * @description Verifica se o número é válido
    * @param phone - string
    * @returns object
    */
@@ -130,7 +148,7 @@ export class WhatsappService {
         throw error;
       }
     } else {
-      return "Número inválido";
+      return resultNumero;
     }
   }
 
@@ -148,18 +166,43 @@ export class WhatsappService {
         return await this.exportedClient.sendImageFromBase64(
           resultNumero.id._serialized,
           image,
+          `${crypto.randomUUID()}.png`,
           caption,
         );
       } catch (error) {
         throw error;
       }
     } else {
-      return "Número inválido";
+      return resultNumero;
     }
   }
 
   /* Converte o número para JiD */
   private converteNumero(phone: string) {
     return `${phone?.replace(/\D/g, "")}@c.us`;
+  }
+
+  /**
+   * @description Checa o status de conexão do Whatsapp
+   */
+  public async getStatus() {
+    if (this.initialized) {
+      return {
+        isOnline: await this.exportedClient.isOnline(),
+        isLoggedIn: await this.exportedClient.isLoggedIn(),
+        isMainInit: await this.exportedClient.isMainInit(),
+        isConnected: await this.exportedClient.isConnected(),
+        isMainReady: await this.exportedClient.isMainReady(),
+        isMainLoaded: await this.exportedClient.isMainLoaded(),
+      };
+    }
+    return {
+      isInit: this.initialized,
+    };
+  }
+
+  public async closeWhatsapp() {
+    if (!this.initialized) return false;
+    return await this.exportedClient.close();
   }
 }
