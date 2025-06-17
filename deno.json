@@ -3,6 +3,7 @@
   "description": "Whatsapp API is a Deno-based implementation of the WPPConnect library.",
   "license": "MIT",
   "tasks": {
+    "cache": "deno cache src/server.ts && deno install --allow-scripts=npm:sharp@0.33.5,npm:puppeteer@23.11.1",
     "start": "deno run --watch src/server.ts",
     "dev": "deno run --watch -A src/server.ts",
     "check": "deno fmt --check --ignore=node_modules && deno lint --ignore=node_modules && deno check **/*.ts ",
