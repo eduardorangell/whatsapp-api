@@ -123,7 +123,7 @@ export class WhatsappService {
   /**
    * @description Verifica se o número é válido
    * @param phone - string
-   * @returns object
+   * @return object
    */
   public async validNumber(phone: string) {
     const numero = this.converteNumero(phone);
@@ -134,7 +134,7 @@ export class WhatsappService {
    * @description Envia mensagem para um número
    * @param phone - string
    * @param text - string
-   * @returns object
+   * @return object
    */
   public async sendText(phone: string, text: string) {
     const resultNumero = await this.validNumber(this.converteNumero(phone));
@@ -157,7 +157,7 @@ export class WhatsappService {
    * @param phone - string
    * @param image - string base 64
    * @param caption - string
-   * @returns object
+   * @return object
    */
   public async sendImage(phone: string, image: string, caption: string) {
     const resultNumero = await this.validNumber(this.converteNumero(phone));
@@ -184,6 +184,7 @@ export class WhatsappService {
 
   /**
    * @description Checa o status de conexão do Whatsapp
+   * @return object
    */
   public async getStatus() {
     if (this.initialized) {
@@ -202,7 +203,11 @@ export class WhatsappService {
   }
 
   public async closeWhatsapp() {
-    if (!this.initialized) return false;
-    return await this.exportedClient.close();
+    if (!this.initialized) return true;
+    const status = await this.exportedClient.close();
+    if (status) {
+      this.initialized = false;
+      return status;
+    }
   }
 }

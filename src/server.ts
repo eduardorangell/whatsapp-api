@@ -5,7 +5,7 @@ import { prettyJSON } from "@hono/pretty-json";
 import { compress } from "@hono/compress";
 import { timing } from "@hono/timing";
 import { validator } from "@hono/validator";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { bold, cyan, yellow } from "@std/fmt/colors";
 
 import { WhatsappService } from "./whatsapp.ts";

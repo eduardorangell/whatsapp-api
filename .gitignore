@@ -9,3 +9,12 @@ tokens
 
 // Other files
 wpp-api.tar
+
+// macOS files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+Icon
