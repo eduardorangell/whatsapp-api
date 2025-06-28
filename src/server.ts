@@ -7,6 +7,7 @@ import { timing } from "@hono/timing";
 import { validator } from "@hono/validator";
 import { z } from "zod/v4";
 import { bold, cyan, yellow } from "@std/fmt/colors";
+import { dirname as _dirname, fromFileUrl as _fromFileUrl } from "@std/path";
 
 import { WhatsappService } from "./whatsapp.ts";
 import env from "./util.ts";
@@ -164,6 +165,55 @@ app.post(
       body.legenda,
     );
     return c.json(resultado);
+  },
+);
+
+// Envia arquivo
+app.post(
+  "/enviar-arquivo",
+  validator("json", (value, c) => {
+    const schema = z.object({
+      phone: z.string().min(10).max(16),
+      arquivo: z.string().min(1),
+    });
+
+    const parsed = schema.safeParse(value);
+
+    if (!parsed.success) {
+      return c.json({
+        error: parsed.error,
+      }, 400);
+    }
+
+    return parsed.data;
+  }),
+  async (c) => {
+    const body = c.req.valid("json");
+
+    try {
+      // Verifica se o arquivo existe antes de tentar enviar
+      const filePath = `./arquivos/${body.arquivo}`;
+      await Deno.stat(filePath);
+
+      const resultado = await wppservice.sendFile(
+        body.phone,
+        body.arquivo,
+      );
+
+      return c.json(resultado);
+    } catch (error) {
+      if (error instanceof Deno.errors.NotFound) {
+        return c.json({
+          error: "Arquivo não encontrado",
+          arquivo: body.arquivo,
+        }, 404);
+      }
+
+      return c.json({
+        error: "Erro ao enviar arquivo",
+        details: error instanceof Error ? error.message : String(error),
+      }, 500);
+    }
   },
 );
 

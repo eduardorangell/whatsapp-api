@@ -177,6 +177,29 @@ export class WhatsappService {
     }
   }
 
+  /**
+   * @description Enviar um arquivo
+   * @param phone - string
+   * @param file - string
+   * @return object
+   */
+  public async sendFile(phone: string, file: string) {
+    const resultNumero = await this.validNumber(this.converteNumero(phone));
+    if (resultNumero.status === 200) {
+      try {
+        const filePath = await Deno.realPath(`./arquivos/${file}`);
+        return await this.exportedClient.sendFile(
+          resultNumero.id._serialized,
+          filePath,
+        );
+      } catch (error) {
+        throw error;
+      }
+    } else {
+      return resultNumero;
+    }
+  }
+
   /* Converte o número para JiD */
   private converteNumero(phone: string) {
     return `${phone?.replace(/\D/g, "")}@c.us`;

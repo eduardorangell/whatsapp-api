@@ -12,8 +12,9 @@
   },
   "imports": {
     "@deno-library/logger": "jsr:@deno-library/logger@^1.2.0",
-    "@hono": "jsr:@hono/hono@^4.7.11",
+    "@hono": "jsr:@hono/hono@^4.8.3",
     "@std/fmt": "jsr:@std/fmt@^1.0.8",
+    "@std/path": "jsr:@std/path@^1.1.0",
     "@wppconnect-team/wppconnect": "npm:@wppconnect-team/wppconnect@^1.37.2",
     "zod": "npm:zod@^3.25.67"
   },
