@@ -1,4 +1,9 @@
-import { assertEquals, assertStringIncludes } from "@std/assert";
+import {
+  assertEquals,
+  assertNotEquals,
+  assertStringIncludes,
+} from "@std/assert";
+import { useKvAuthState } from "./auth-kv.ts";
 import {
   caminhoSeguro,
   decodificaImagem,
@@ -36,4 +41,18 @@ Deno.test("tipoDoArquivo deduz o mimetype pela extensão", () => {
 Deno.test("estado começa desconectado", () => {
   assertEquals(estado().online, false);
   assertEquals(estado().sessaoIniciada, false);
+});
+
+Deno.test("useKvAuthState grava creds novas na hora", async () => {
+  const kv = await Deno.openKv(":memory:");
+  const { state } = await useKvAuthState(kv, "t1");
+
+  // Persistiu sem esperar por "creds.update".
+  const { state: relido } = await useKvAuthState(kv, "t1");
+  assertEquals(relido.creds.registrationId, state.creds.registrationId);
+
+  // Sessões diferentes não se misturam.
+  const { state: outra } = await useKvAuthState(kv, "t2");
+  assertNotEquals(outra.creds.registrationId, state.creds.registrationId);
+  kv.close();
 });

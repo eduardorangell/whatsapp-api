@@ -24,7 +24,12 @@ export async function useKvAuthState(
   const write = (value: unknown, ...parts: string[]) =>
     kv.set(key(...parts), JSON.stringify(value, BufferJSON.replacer));
 
-  const creds = await read<AuthenticationCreds>("creds") ?? initAuthCreds();
+  const salvas = await read<AuthenticationCreds>("creds");
+  const creds = salvas ?? initAuthCreds();
+  // Baileys só emite "creds.update" quando o pareamento avança. Sem gravar
+  // agora, um restart antes da leitura do QR geraria outra identidade e
+  // invalidaria o QR que já está na tela.
+  if (!salvas) await write(creds, "creds");
 
   return {
     state: {

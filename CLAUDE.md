@@ -64,6 +64,11 @@ Never make it a hard dependency.
 
 **`pino` calls `os.hostname()` at import time**, so `--allow-sys` is required.
 
+**New creds must be written to KV immediately** (`useKvAuthState` does this).
+Baileys only emits `creds.update` once pairing advances, so relying on that
+event alone means a restart during the QR window regenerates the identity and
+invalidates the QR already on screen.
+
 **Deno KV: the default path needs no `--allow-write`; an explicit path does.**
 `KV_PATH` is unset in local dev (writeless) and set to `/data/kv.sqlite3` in
 Docker, where `--allow-write=/data` is scoped to just that volume. KV also
