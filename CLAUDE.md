@@ -1,29 +1,59 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with
+code in this repository.
 
 ## Project state
 
-This is a fresh Deno scaffold — three files (`main.ts`, `main_test.ts`, `deno.json`) and no dependencies beyond `@std/assert`. Despite the directory name, there is no Baileys/WhatsApp code here yet; assume any WhatsApp integration still has to be built from scratch rather than looking for existing modules.
+Feasibility spike, not a product yet. The goal is to rebuild the sibling project
+at `../whatsapp-api` (send text/images over WhatsApp) on **pure Deno with no
+Node.js and no headless Chrome**, using Baileys instead of WPPConnect.
 
-Not a git repository — there is no history to consult and `git` commands will fail until someone runs `git init`.
+`spike.ts` + `auth-kv.ts` are the proof that this works. There is no HTTP API
+here yet — that is the next step, and `../whatsapp-api/src/server.ts` (Hono +
+zod) is the template to port.
 
 ## Commands
 
 ```
-deno task dev          # run main.ts with --watch --allow-net
-deno test              # run all tests
-deno test main_test.ts --filter "returns json on /api"   # single test by name
-deno check main.ts     # typecheck
-deno fmt / deno lint   # built-in formatter and linter (no config; defaults apply)
+deno task spike    # connect to WhatsApp, print QR in terminal
+deno task check    # fmt --check + lint + typecheck
 ```
 
-Tests use `Deno.test` and need no network permission because they call `handler` directly rather than starting a server.
+`spike.ts` deliberately runs without `--allow-write`, `--allow-run`, or
+`--allow-ffi` to prove no filesystem or subprocess dependency.
 
-## Architecture
+## Hard constraints (verified, do not re-litigate)
 
-`main.ts` exports a single `handler(req: Request): Response` and only calls `Deno.serve` under `import.meta.main`. That split is what makes the tests permission-free and fast — keep request handling in exported, directly-callable functions and confine server startup to the `import.meta.main` block.
+**Baileys 6.x cannot work in Deno.** It declares `libsignal` as a `git+https://`
+dependency and Deno refuses non-npm dependencies outright. Only the 7.x line
+(`npm:baileys@7.0.0-rc14`, dist-tag `latest`) installs — it moved signal crypto
+to `whatsapp-rust-bridge`, which is **WebAssembly, not a native addon**, so it
+stays portable. Do not "downgrade to stable 6.x" to fix a bug; it will not
+install.
 
-Routing is a manual `URL.pathname` comparison. If routes grow past a handful, that's the point to introduce a router rather than extending the if-chain.
+**Auth state must never touch the filesystem.** `useKvAuthState` in `auth-kv.ts`
+replaces Baileys' `useMultiFileAuthState` with Deno KV. Keep it that way — it is
+what makes the process relocatable.
 
-Dependencies are declared in the `imports` map in `deno.json` (JSR/npm specifiers), not in a `package.json`. There is no lockfile checked in yet; adding one (`deno.lock`) happens automatically on the first install of a new dependency.
+**`sharp` and `jimp` are optional.** Baileys loads them via
+`import(...).catch(() => {})` for thumbnails only. `sharp` is a native addon and
+will fail to load on restricted hosts; that is expected and non-fatal. Never add
+`sharp` as a hard dependency.
+
+**`pino` calls `os.hostname()` at import time**, so `--allow-sys` is required
+even though nothing else needs it.
+
+## Deployment
+
+Deno Deploy is **not** a viable target and this is architectural, not a bug to
+work around. Baileys holds one long-lived outbound WebSocket carrying ratcheting
+Signal session state; Deno Deploy evicts idle isolates (5s–10min) and may run
+several regional instances, and two instances sharing one set of credentials
+trigger a WhatsApp session conflict. The connection process needs an always-on
+host (VPS/Fly/Railway). An HTTP layer _in front_ of it can live on Deploy.
+
+## Style
+
+Portuguese for user-facing strings and API route names (matching
+`../whatsapp-api`); English for code identifiers.
