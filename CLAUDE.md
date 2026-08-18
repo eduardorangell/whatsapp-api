@@ -88,6 +88,15 @@ isolates (5s–10min) and may run several regional instances, and two instances
 sharing one set of credentials trigger a WhatsApp session conflict. Use an
 always-on host (VPS/Fly/Railway) — the container is ~104 MB RSS.
 
+## Commits
+
+Commits are GPG-signed as `Eduardo Rangell <rangellferreira@gmail.com>` (key
+`D7670409DFEE182E`), matching `../whatsapp-api`. The identity lives in this
+repo's local git config — **never pass `-c user.name`/`-c user.email` to
+`git
+commit`**; let git read the config. Verify with
+`git log --format='%h %G? %an'` (`G` = good signature).
+
 ## Style
 
 Portuguese for user-facing strings, route names and identifiers in `src/`
