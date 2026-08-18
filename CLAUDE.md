@@ -5,23 +5,29 @@ code in this repository.
 
 ## Project state
 
-Feasibility spike, not a product yet. The goal is to rebuild the sibling project
-at `../whatsapp-api` (send text/images over WhatsApp) on **pure Deno with no
-Node.js and no headless Chrome**, using Baileys instead of WPPConnect.
+Minimal working rewrite of the sibling project at `../whatsapp-api` (send
+text/images over WhatsApp) on **pure Deno with no Node.js and no headless
+Chrome**, using Baileys instead of WPPConnect.
 
-`spike.ts` + `auth-kv.ts` are the proof that this works. There is no HTTP API
-here yet — that is the next step, and `../whatsapp-api/src/server.ts` (Hono +
-zod) is the template to port.
+Three files: `wa.ts` (one socket + send helpers), `server.ts` (HTTP routes),
+`auth-kv.ts` (session in Deno KV). Deliberately no Hono and no zod — the sibling
+project uses both, but three routes do not need them. Add them back only when
+route count or schema complexity actually justifies it.
 
 ## Commands
 
 ```
-deno task spike    # connect to WhatsApp, print QR in terminal
+deno task dev      # server + QR in terminal, --watch
+deno task start    # same without --watch
+deno task test     # unit + route tests (no pairing needed)
 deno task check    # fmt --check + lint + typecheck
 ```
 
-`spike.ts` deliberately runs without `--allow-write`, `--allow-run`, or
-`--allow-ffi` to prove no filesystem or subprocess dependency.
+Everything runs without `--allow-write`, `--allow-run`, or `--allow-ffi` — no
+filesystem or subprocess dependency anywhere.
+
+Routes validate method, path, and payload _before_ checking the connection, so
+`rota()` in `server.ts` is testable without pairing a phone. Keep that ordering.
 
 ## Hard constraints (verified, do not re-litigate)
 
