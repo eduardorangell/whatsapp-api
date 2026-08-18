@@ -1,0 +1,20 @@
+services:
+  whatsapp-baileys:
+    build: .
+    container_name: whatsapp-baileys
+    ports:
+      - "3000:3000"
+    volumes:
+      # Sessão do WhatsApp. Apagar = precisar parear de novo.
+      - kv:/data
+      # Arquivos que /enviar-arquivo pode mandar (somente leitura).
+      - ./arquivos:/arquivos:ro
+    environment:
+      - PORT=3000
+      - SESSAO=suporte
+    restart: unless-stopped
+    # O QR aparece aqui: docker compose up (sem -d) ou docker compose logs -f
+    tty: true
+
+volumes:
+  kv:
