@@ -10,6 +10,7 @@ import { decodeBase64 } from "@std/encoding/base64";
 import { contentType } from "@std/media-types";
 import { basename, extname, join } from "@std/path";
 import { useKvAuthState } from "./auth-kv.ts";
+import { contadores, log } from "./obs.ts";
 
 type Logger = NonNullable<Parameters<typeof makeWASocket>[0]["logger"]>;
 
@@ -27,6 +28,9 @@ let sock: WASocket | null = null;
 let online = false;
 let ultimoQr: string | null = null;
 let desligadoDeProposito = false;
+let ultimaDesconexao:
+  | { quando: string; motivo: string; codigo?: number }
+  | null = null;
 
 // ---------- helpers puros (testáveis sem conexão) ----------
 
@@ -54,6 +58,7 @@ export function estado() {
     sessaoIniciada: sock !== null,
     usuario: sock?.user ?? null,
     qrPendente: ultimoQr !== null,
+    ultimaDesconexao,
   };
 }
 
@@ -72,27 +77,38 @@ export async function conectar(kv: Deno.Kv, sessao: string) {
   sock.ev.on("connection.update", ({ connection, qr, lastDisconnect }) => {
     if (qr) {
       ultimoQr = qr;
+      log("info", "qr_gerado", { sessao });
+      // QR vai cru no stdout de propósito: dentro de JSON vira lixo ilegível.
       qrcode.generate(qr, { small: true });
     }
     if (connection === "open") {
       online = true;
       ultimoQr = null;
-      console.log("whatsapp conectado:", sock?.user?.id);
+      log("info", "conectado", { sessao, usuario: sock?.user?.id });
     }
     if (connection === "close") {
       online = false;
-      if (desligadoDeProposito) return;
-
       const codigo = (lastDisconnect?.error as {
         output?: { statusCode?: number };
       })?.output?.statusCode;
+      const motivo = lastDisconnect?.error?.message ?? "desconhecido";
+      ultimaDesconexao = { quando: new Date().toISOString(), motivo, codigo };
+
+      if (desligadoDeProposito) {
+        log("info", "desconectado", { sessao, motivo: "fechado via /fechar" });
+        return;
+      }
 
       if (codigo === DisconnectReason.loggedOut) {
-        console.log("deslogado — apague a sessão do KV e pareie de novo");
+        log("erro", "deslogado", {
+          sessao,
+          motivo,
+          acao: "apague a sessão do KV e pareie de novo",
+        });
         sock = null;
         return;
       }
-      console.log("reconectando...");
+      log("erro", "reconectando", { sessao, motivo, codigo });
       conectar(kv, sessao);
     }
   });
@@ -140,6 +156,8 @@ export async function enviarTexto(phone: string, texto: string) {
   const jid = await numeroValido(phone);
   if (!jid) return null;
   const msg = await socket().sendMessage(jid, { text: texto });
+  contadores.enviadas++;
+  log("info", "enviado", { tipo: "texto", jid, id: msg?.key.id });
   return { jid, id: msg?.key.id };
 }
 
@@ -159,6 +177,8 @@ export async function enviarImagem(
     image: conteudo,
     caption: legenda,
   });
+  contadores.enviadas++;
+  log("info", "enviado", { tipo: "imagem", jid, id: msg?.key.id });
   return { jid, id: msg?.key.id };
 }
 
@@ -176,6 +196,13 @@ export async function enviarArquivo(
     document: Buffer.from(bytes),
     mimetype: tipoDoArquivo(caminho),
     fileName: basename(arquivo),
+  });
+  contadores.enviadas++;
+  log("info", "enviado", {
+    tipo: "arquivo",
+    jid,
+    id: msg?.key.id,
+    bytes: bytes.byteLength,
   });
   return { jid, id: msg?.key.id };
 }

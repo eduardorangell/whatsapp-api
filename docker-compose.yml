@@ -12,6 +12,11 @@ services:
     environment:
       - PORT=3000
       - SESSAO=suporte
+      # Descomente para exportar logs/traces via OpenTelemetry.
+      # O Deno instrumenta o Deno.serve e captura os logs sozinho.
+      # - OTEL_DENO=true
+      # - OTEL_SERVICE_NAME=whatsapp-baileys
+      # - OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4318
     restart: unless-stopped
     # O QR aparece aqui: docker compose up (sem -d) ou docker compose logs -f
     tty: true

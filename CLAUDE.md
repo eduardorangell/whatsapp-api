@@ -12,9 +12,12 @@ Baileys instead of WPPConnect.
 ```
 src/env.ts       config from env vars
 src/auth-kv.ts   session stored in Deno KV (replaces useMultiFileAuthState)
+src/obs.ts       structured JSON logging + counters
 src/wa.ts        one socket + send helpers; pure helpers exported for tests
 src/server.ts    Deno.serve + a route table
 ```
+
+See `README.md` for the user-facing docs (routes, env vars, docker).
 
 **No Hono, no zod, deliberately.** Eight routes with flat payloads do not need a
 router or a schema library — `Deno.serve` plus a `Record<"METHOD /path", fn>`
@@ -27,7 +30,7 @@ arrays.
 ```
 deno task dev      # server + QR in terminal, --watch
 deno task start
-deno task test     # 14 tests, no phone pairing needed
+deno task test     # 21 tests, no phone pairing needed
 deno task check    # fmt --check + lint + typecheck
 docker compose up  # QR appears in the compose logs
 ```
@@ -73,6 +76,24 @@ invalidates the QR already on screen.
 `KV_PATH` is unset in local dev (writeless) and set to `/data/kv.sqlite3` in
 Docker, where `--allow-write=/data` is scoped to just that volume. KV also
 creates `-wal`/`-shm` siblings, so the volume must be the directory.
+
+## Observability
+
+One JSON line per event on stdout via `log()` in `src/obs.ts` — never log
+payloads, they carry message text and base64 images. `rota()` stays pure and
+untouched by logging; `comObservabilidade()` wraps it and is what `Deno.serve`
+receives, which is why route tests need no log plumbing.
+
+`contadores.erros` counts 5xx only — a 4xx is the client's fault, not an outage.
+Metrics ride along in `GET /status`.
+
+`--unstable-otel` is always on in the run tasks but inert unless
+`OTEL_DENO=true` is set; Deno then captures `console.log` as OTel logs and
+traces `Deno.serve` with no code change.
+
+`deno eval` takes no `--allow-*` flags (it runs with permissions already) and
+the image has no `curl` — that combination is why the Docker HEALTHCHECK looks
+the way it does.
 
 ## Testing
 

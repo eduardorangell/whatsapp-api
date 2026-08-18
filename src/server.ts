@@ -11,6 +11,7 @@ import {
   soDigitos,
 } from "./wa.ts";
 import env from "./env.ts";
+import { contadores, detalhesDoErro, log, resumo } from "./obs.ts";
 
 type Corpo = Record<string, unknown>;
 
@@ -52,7 +53,7 @@ async function existente<T>(envio: Promise<T | null>): Promise<T> {
 const rotas: Record<string, (corpo: Corpo) => unknown> = {
   "GET /": () => ({ mensagem: "Olá" }),
 
-  "GET /status": () => estado(),
+  "GET /status": () => ({ ...estado(), metricas: resumo() }),
 
   "POST /iniciar": (c) =>
     iniciar(c.phone === undefined ? undefined : exigeTelefone(c)),
@@ -111,13 +112,31 @@ export async function rota(req: Request): Promise<Response> {
   } catch (e) {
     if (e instanceof HttpErro) return json({ erro: e.message }, e.status);
     if (e instanceof Deno.errors.NotFound) {
+      contadores.falhasDeEnvio++;
       return json({ erro: "arquivo não encontrado" }, 404);
     }
     const msg = e instanceof Error ? e.message : String(e);
     if (msg.includes("desconectado")) return json({ erro: msg }, 503);
-    console.error(e);
+
+    // Só 5xx é falha nossa: 4xx é o cliente mandando errado.
+    contadores.erros++;
+    log("erro", "excecao", { rota: pathname, ...detalhesDoErro(e) });
     return json({ erro: msg }, 500);
   }
+}
+
+/** Envolve `rota` com log de acesso. `rota` fica pura, e testável. */
+export async function comObservabilidade(req: Request): Promise<Response> {
+  const comeco = performance.now();
+  contadores.requisicoes++;
+  const res = await rota(req);
+  log(res.status >= 500 ? "erro" : "info", "requisicao", {
+    metodo: req.method,
+    rota: new URL(req.url).pathname,
+    status: res.status,
+    ms: Number((performance.now() - comeco).toFixed(1)),
+  });
+  return res;
 }
 
 if (import.meta.main) {
@@ -127,6 +146,10 @@ if (import.meta.main) {
   Deno.serve({
     port: PORT,
     onListen: ({ hostname, port }) =>
-      console.log(`servidor em http://${hostname}:${port}`),
-  }, rota);
+      log("info", "servidor_iniciado", {
+        url: `http://${hostname}:${port}`,
+        sessao: SESSAO,
+        kv: KV_PATH ?? "padrão do Deno",
+      }),
+  }, comObservabilidade);
 }
