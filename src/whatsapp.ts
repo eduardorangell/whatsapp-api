@@ -1,6 +1,10 @@
 import { create, Whatsapp } from "@wppconnect-team/wppconnect";
 import { bold, red } from "@std/fmt/colors";
+import { delay } from "@std/async";
 import env, { logger } from "./util.ts";
+
+import { extname } from "@std/path";
+import { encodeBase64 } from "@std/encoding";
 
 export class WhatsappService {
   private exportedClient!: Whatsapp;
@@ -47,6 +51,8 @@ export class WhatsappService {
         browserArgs: [
           "--disable-web-security",
           "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-features=MacRouters",
           "--disable-web-security",
           "--aggressive-cache-discard",
           "--disable-cache",
@@ -68,9 +74,7 @@ export class WhatsappService {
           "--ignore-certificate-errors-spki-list",
           "--disable-features=LeakyPeeker",
         ],
-        puppeteerOptions: {
-          headless: "shell",
-        },
+        puppeteerOptions: {},
         logQR: env().LOG_QR,
         disableWelcome: true,
         updatesLog: true,
@@ -153,9 +157,107 @@ export class WhatsappService {
   }
 
   /**
-   * @description Envia imagem para um número
+   * @description Resolve entrada de imagem (URL, caminho de arquivo local ou Base64) para Data URI
+   */
+  private async resolverImagem(entrada?: string): Promise<string | undefined> {
+    if (!entrada) return undefined;
+
+    // 1. URL HTTP ou HTTPS
+    if (entrada.startsWith("http://") || entrada.startsWith("https://")) {
+      const res = await fetch(entrada);
+      if (!res.ok) {
+        throw new Error(`Falha ao baixar imagem da URL: ${res.statusText}`);
+      }
+      const buf = await res.arrayBuffer();
+      const mime = res.headers.get("content-type") ?? "image/jpeg";
+      return `data:${mime};base64,${encodeBase64(new Uint8Array(buf))}`;
+    }
+
+    // 2. Data URI já pronta
+    if (entrada.startsWith("data:image/")) {
+      return entrada;
+    }
+
+    // 3. Arquivo local no disco (caminho direto ou na pasta ./arquivos)
+    try {
+      const bytes = await Deno.readFile(entrada);
+      const ext = extname(entrada).replace(".", "").toLowerCase();
+      const mime = ext === "png"
+        ? "image/png"
+        : ext === "webp"
+        ? "image/webp"
+        : "image/jpeg";
+      return `data:${mime};base64,${encodeBase64(bytes)}`;
+    } catch {
+      try {
+        const caminhoArquivos = `./arquivos/${entrada}`;
+        const bytes = await Deno.readFile(caminhoArquivos);
+        const ext = extname(caminhoArquivos).replace(".", "").toLowerCase();
+        const mime = ext === "png"
+          ? "image/png"
+          : ext === "webp"
+          ? "image/webp"
+          : "image/jpeg";
+        return `data:${mime};base64,${encodeBase64(bytes)}`;
+      } catch {
+        // Não é arquivo local
+      }
+    }
+
+    // 4. Base64 puro sem cabeçalho data:
+    return `data:image/jpeg;base64,${entrada}`;
+  }
+
+  public async enviarTudo(
+    numeros: string[],
+    texto: string,
+    imagemEntrada?: string,
+  ) {
+    let imagem: string | undefined;
+
+    if (imagemEntrada) {
+      try {
+        imagem = await this.resolverImagem(imagemEntrada);
+      } catch (err) {
+        console.error(
+          `[ERRO] Falha ao processar imagem para envio em lote:`,
+          err,
+        );
+      }
+    }
+
+    console.log(`[LOTE] Iniciando envio para ${numeros.length} números...`);
+
+    for (const [idx, num] of numeros.entries()) {
+      console.log(`[${idx + 1}/${numeros.length}] - Enviando para: ${num}`);
+      try {
+        if (imagem) {
+          const result = await this.sendImage(num, imagem, texto);
+          console.log(result);
+        } else {
+          const result = await this.sendText(num, texto);
+          console.log(result);
+        }
+      } catch (err) {
+        console.error(`[ERRO] Falha ao enviar para ${num}:`, err);
+      }
+
+      if (idx < numeros.length - 1) {
+        const tempoEspera = this.gerarTempoDeDigitacao(30, 45);
+        console.log(
+          `Aguardando ${tempoEspera / 1000}s antes do próximo envio...`,
+        );
+        await delay(tempoEspera);
+      }
+    }
+
+    console.log(`[LOTE] Envio em lote finalizado.`);
+  }
+
+  /**
+   * @description Envia imagem para um número (aceita URL, caminho de arquivo ou base64)
    * @param phone - string
-   * @param image - string base 64
+   * @param image - string (url, caminho ou base64)
    * @param caption - string
    * @return object
    */
@@ -163,9 +265,10 @@ export class WhatsappService {
     const resultNumero = await this.validNumber(this.converteNumero(phone));
     if (resultNumero.status === 200) {
       try {
+        const imagemBase64 = (await this.resolverImagem(image)) ?? image;
         return await this.exportedClient.sendImageFromBase64(
           resultNumero.id._serialized,
-          image,
+          imagemBase64,
           `${crypto.randomUUID()}.png`,
           caption,
         );
@@ -198,6 +301,16 @@ export class WhatsappService {
     } else {
       return resultNumero;
     }
+  }
+
+  /**
+   * Gera um número em milisegundos inteiro aleatório entre um intervalo definido (inclusive).
+   * @param min Valor mínimo do intervalo
+   * @param max Valor máximo do intervalo
+   * @returns Número inteiro entre min e max
+   */
+  private gerarTempoDeDigitacao(min: number, max: number): number {
+    return ((Math.floor(Math.random() * (max - min + 1)) + min) * 1000);
   }
 
   /* Converte o número para JiD */

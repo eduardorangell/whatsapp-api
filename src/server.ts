@@ -7,7 +7,6 @@ import { timing } from "@hono/timing";
 import { validator } from "@hono/validator";
 import { z } from "zod/v4";
 import { bold, cyan, yellow } from "@std/fmt/colors";
-import { dirname as _dirname, fromFileUrl as _fromFileUrl } from "@std/path";
 
 import { WhatsappService } from "./whatsapp.ts";
 import env from "./util.ts";
@@ -96,7 +95,7 @@ app.post(
   "/numero-valido",
   validator("json", (value, c) => {
     const schema = z.object({
-      phone: z.string().min(10).max(16),
+      phone: z.string().min(10).max(18),
     });
     const parsed = schema.safeParse(value);
     if (!parsed.success) {
@@ -118,12 +117,13 @@ app.post(
   "/enviar-mensagem",
   validator("json", (value, c) => {
     const schema = z.object({
-      phone: z.string().min(10).max(16), //+55 62 985816374
+      phone: z.string().min(10).max(18), //+55 62 985816374
       texto: z.string().min(1).max(10000),
     });
     const parsed = schema.safeParse(value);
 
     if (!parsed.success) {
+      console.log(parsed.error);
       return c.json({
         error: parsed.error,
       }, 400);
@@ -133,6 +133,7 @@ app.post(
   async (c) => {
     const body = c.req.valid("json");
     const resultado = await wppservice.sendText(body.phone, body.texto);
+    console.log(resultado);
     return c.json(resultado);
   },
 );
@@ -142,14 +143,15 @@ app.post(
   "/enviar-imagem",
   validator("json", (value, c) => {
     const schema = z.object({
-      phone: z.string().min(10).max(16),
+      phone: z.string().min(10).max(18),
       imagem: z.string().min(1),
-      legenda: z.string().min(1).max(1000),
+      legenda: z.string().max(1000),
     });
 
     const parsed = schema.safeParse(value);
 
     if (!parsed.success) {
+      console.log(parsed.error);
       return c.json({
         error: parsed.error,
       }, 400);
@@ -164,7 +166,48 @@ app.post(
       body.imagem,
       body.legenda,
     );
+    console.log(resultado);
     return c.json(resultado);
+  },
+);
+
+// Envia para múltiplos números em lote (com delay de segurança)
+app.post(
+  "/enviar-tudo",
+  validator("json", (value, c) => {
+    const schema = z.object({
+      numeros: z.array(z.string().min(10).max(20)).min(1),
+      texto: z.string().min(1).max(10000).optional(),
+      mensagem: z.string().min(1).max(10000).optional(),
+      imagem: z.string().optional(),
+    }).refine(
+      (data) => data.texto !== undefined || data.mensagem !== undefined,
+      {
+        message: "O campo 'texto' (ou 'mensagem') é obrigatório.",
+      },
+    );
+
+    const parsed = schema.safeParse(value);
+
+    if (!parsed.success) {
+      return c.json({
+        error: parsed.error,
+      }, 400);
+    }
+
+    return parsed.data;
+  }),
+  (c) => {
+    const body = c.req.valid("json");
+    const texto = body.texto ?? body.mensagem!;
+    // Executa em segundo plano para não dar timeout HTTP
+    wppservice.enviarTudo(body.numeros, texto, body.imagem);
+    return c.json({
+      status: "iniciado",
+      total: body.numeros.length,
+      mensagem:
+        "Envio em lote iniciado em segundo plano com intervalo de segurança (30 a 45s).",
+    });
   },
 );
 
@@ -173,7 +216,7 @@ app.post(
   "/enviar-arquivo",
   validator("json", (value, c) => {
     const schema = z.object({
-      phone: z.string().min(10).max(16),
+      phone: z.string().min(10).max(18),
       arquivo: z.string().min(1),
     });
 
@@ -199,7 +242,6 @@ app.post(
         body.phone,
         body.arquivo,
       );
-
       return c.json(resultado);
     } catch (error) {
       if (error instanceof Deno.errors.NotFound) {
