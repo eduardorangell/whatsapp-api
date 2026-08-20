@@ -56,27 +56,25 @@ const customLogger = (...rest: string[]) => {
 };
 app.use(logger(customLogger));
 
-// Inicia instância do whatsapp
-app.post(
-  "/iniciar",
-  validator("json", (value, c) => {
-    const schema = z.object({
-      phone: z.string().min(10).max(16).optional(),
-    });
-    const parsed = schema.safeParse(value);
-    if (!parsed.success) {
-      return c.json({
-        error: parsed.error,
-      }, 400);
+// Inicia instância do whatsapp (com ou sem telefone)
+app.post("/iniciar", async (c) => {
+  let phone: string | undefined;
+  const contentType = c.req.header("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    try {
+      const body = await c.req.json();
+      if (body && typeof body.phone === "string" && body.phone.trim()) {
+        phone = body.phone.trim();
+      }
+    } catch {
+      // JSON vazio ou inválido -> prossegue sem telefone (gera QR)
     }
-    return parsed.data;
-  }),
-  async (c) => {
-    const body = c.req.valid("json");
-    const result = await wppservice.initWhatsapp(body.phone);
-    return c.json({ status: result });
-  },
-);
+  }
+
+  const result = await wppservice.initWhatsapp(phone);
+  return c.json({ status: result });
+});
 
 // Finaliza instância do whatsapp
 app.post("/fechar", async (c) => {

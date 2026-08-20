@@ -1,5 +1,5 @@
 import { create, Whatsapp } from "@wppconnect-team/wppconnect";
-import { bold, red } from "@std/fmt/colors";
+import { bold, cyan, red } from "@std/fmt/colors";
 import { delay } from "@std/async";
 import env, { logger } from "./util.ts";
 
@@ -21,18 +21,26 @@ export class WhatsappService {
     if (this.initialized) {
       return "Instância já inicializada";
     } else {
+      const phoneLimpo = phoneNumber
+        ? phoneNumber.replace(/\D/g, "")
+        : undefined;
+
       this.exportedClient = await create({
         session: "suporte",
-        phoneNumber: phoneNumber,
+        phoneNumber: phoneLimpo,
         catchLinkCode: (linkCode) => {
-          logger.log("Link code: ", linkCode);
+          console.log("\n========================================");
+          console.log(
+            ` CÓDIGO DE PAREAMENTO: ${bold(cyan(linkCode))}`,
+          );
+          console.log(" Insira este código no seu WhatsApp");
+          console.log("========================================\n");
         },
         catchQR: (_base64Qrimg, asciiQR, attempts, _urlCode) => {
-          logger.log(
-            "Number of attempts to read the qrcode: ",
-            attempts,
+          console.log(
+            `\n[QR CODE] Tentativa ${attempts} para leitura:`,
           );
-          logger.log(`Terminal qrcode: \n${asciiQR}`);
+          console.log(asciiQR);
         },
         statusFind: (statusSession, session) => {
           logger.log("Status Session: ", statusSession);
