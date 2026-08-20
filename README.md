@@ -73,20 +73,26 @@ docker volume inspect whatsapp-baileys_kv
 
 ## Rotas
 
-| Método | Rota               | Corpo                       | O que faz                                    |
-| ------ | ------------------ | --------------------------- | -------------------------------------------- |
-| GET    | `/`                | —                           | ping                                         |
-| GET    | `/status`          | —                           | conexão + métricas                           |
-| POST   | `/iniciar`         | `{phone?}`                  | com `phone`: código de pareamento; sem: o QR |
-| POST   | `/fechar`          | —                           | fecha o socket sem desparear                 |
-| POST   | `/numero-valido`   | `{phone}`                   | o número existe no WhatsApp?                 |
-| POST   | `/enviar-mensagem` | `{phone, texto}`            | envia texto                                  |
-| POST   | `/enviar-imagem`   | `{phone, imagem, legenda?}` | `imagem`: URL http(s) ou base64              |
-| POST   | `/enviar-arquivo`  | `{phone, arquivo}`          | `arquivo`: nome dentro de `./arquivos`       |
+| Método | Rota               | Corpo                       | O que faz                                              |
+| ------ | ------------------ | --------------------------- | ------------------------------------------------------ |
+| GET    | `/`                | —                           | ping                                                   |
+| GET    | `/status`          | —                           | conexão + métricas                                     |
+| POST   | `/iniciar`         | `{phone?}`                  | com `phone`: código de pareamento; sem: o QR           |
+| POST   | `/fechar`          | —                           | fecha o socket sem desparear                           |
+| POST   | `/numero-valido`   | `{phone}`                   | o número existe no WhatsApp?                           |
+| POST   | `/enviar-mensagem` | `{phone, texto}`            | envia texto                                            |
+| POST   | `/enviar-imagem`   | `{phone, imagem, legenda?}` | `imagem`: URL http(s) ou base64                        |
+| POST   | `/enviar-arquivo`  | `{phone, arquivo}`          | `arquivo`: nome dentro de `./arquivos`                 |
+| POST   | `/enviar-tudo`     | `{numeros, texto, imagem?}` | envio em lote assíncrono com delay anti-ban (30 a 45s) |
 
 ```bash
 curl -X POST localhost:3000/enviar-mensagem \
   -d '{"phone":"+55 (62) 98557-8421","texto":"olá"}'
+
+# Envio em lote com delay de segurança
+curl -X POST localhost:3000/enviar-tudo \
+  -H "Content-Type: application/json" \
+  -d '{"numeros":["5562985578421","5562983328888"],"texto":"Olá a todos!","imagem":"./jardins.jpeg"}'
 ```
 
 O `phone` aceita máscara — só os dígitos são usados. O JID nunca é montado na
@@ -186,9 +192,9 @@ um daemon sempre ligado, mas o daemon tem que existir.
 
 ## Limitações conhecidas
 
-- **Sem envio em massa.** O `enviarTudo()` do projeto antigo não foi trazido. Se
-  voltar, tem que vir com o intervalo aleatório de 30–45s que o original tinha —
-  disparar sem intervalo derruba o número.
+- **Envio em lote com delay anti-ban.** O `/enviar-tudo` executa com intervalo
+  aleatório de 30 a 45 segundos entre cada mensagem para proteger o número
+  contra bloqueios.
 - **Uma sessão por processo.** Vários números = vários containers, cada um com
   seu `SESSAO` e seu volume.
 - **Baileys 7.x obrigatório.** A linha 6.x declara `libsignal` como dependência

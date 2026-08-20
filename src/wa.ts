@@ -161,18 +161,47 @@ export async function enviarTexto(phone: string, texto: string) {
   return { jid, id: msg?.key.id };
 }
 
-/** `imagem` é uma URL http(s) ou base64/data URI. */
+/** Resolve imagem para o formato esperado pelo Baileys ({ url } ou Buffer). */
+export async function resolverImagemConteudo(
+  entrada: string,
+  pastaArquivos?: string,
+): Promise<{ url: string } | Buffer> {
+  if (entrada.startsWith("http://") || entrada.startsWith("https://")) {
+    return { url: entrada };
+  }
+
+  // Tenta ler como arquivo local dentro de pastaArquivos ou caminho direto
+  if (pastaArquivos) {
+    try {
+      const caminho = caminhoSeguro(pastaArquivos, entrada);
+      const bytes = await Deno.readFile(caminho);
+      return Buffer.from(bytes);
+    } catch {
+      // Não é arquivo dentro da pasta
+    }
+  }
+
+  try {
+    const bytes = await Deno.readFile(entrada);
+    return Buffer.from(bytes);
+  } catch {
+    // Não é caminho direto
+  }
+
+  // Trata como base64
+  return Buffer.from(decodificaImagem(entrada));
+}
+
+/** `imagem` é uma URL http(s), caminho de arquivo ou base64/data URI. */
 export async function enviarImagem(
   phone: string,
   imagem: string,
   legenda: string,
+  pastaArquivos?: string,
 ) {
   const jid = await numeroValido(phone);
   if (!jid) return null;
-  // Baileys tipa a mídia como Buffer do Node; URL http ele mesmo baixa.
-  const conteudo = imagem.startsWith("http")
-    ? { url: imagem }
-    : Buffer.from(decodificaImagem(imagem));
+  const conteudo = await resolverImagemConteudo(imagem, pastaArquivos);
   const msg = await socket().sendMessage(jid, {
     image: conteudo,
     caption: legenda,
@@ -205,4 +234,52 @@ export async function enviarArquivo(
     bytes: bytes.byteLength,
   });
   return { jid, id: msg?.key.id };
+}
+
+export const delayMs = (ms: number) =>
+  ms > 0
+    ? new Promise((resolve) => setTimeout(resolve, ms))
+    : Promise.resolve();
+
+export const tempoDeEsperaAleatorio = (min = 30, max = 45) =>
+  Deno.env.get("DENO_ENV") === "test"
+    ? 0
+    : (Math.floor(Math.random() * (max - min + 1)) + min) * 1000;
+
+/** Envio em lote assíncrono com delay anti-banimento (30-45s). */
+export async function enviarTudo(
+  numeros: string[],
+  texto: string,
+  pastaArquivos: string,
+  imagem?: string,
+) {
+  log("info", "lote_iniciado", { total: numeros.length, temImagem: !!imagem });
+
+  for (const [idx, num] of numeros.entries()) {
+    try {
+      if (imagem) {
+        await enviarImagem(num, imagem, texto, pastaArquivos);
+      } else {
+        await enviarTexto(num, texto);
+      }
+    } catch (e) {
+      log("erro", "falha_lote", {
+        numero: num,
+        indice: idx + 1,
+        erro: e instanceof Error ? e.message : String(e),
+      });
+    }
+
+    if (idx < numeros.length - 1) {
+      const espera = tempoDeEsperaAleatorio(30, 45);
+      log("info", "lote_aguardando", {
+        segundos: espera / 1000,
+        proximo: idx + 2,
+        total: numeros.length,
+      });
+      await delayMs(espera);
+    }
+  }
+
+  log("info", "lote_finalizado", { total: numeros.length });
 }

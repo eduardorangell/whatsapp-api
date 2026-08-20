@@ -39,11 +39,11 @@ docker compose up  # QR appears in the compose logs
 
 `GET /`, `GET /status`, `POST /iniciar` (`{phone?}` → pairing code, else QR),
 `POST /fechar`, `POST /numero-valido`, `POST /enviar-mensagem`,
-`POST /enviar-imagem`, `POST /enviar-arquivo`.
+`POST /enviar-imagem`, `POST /enviar-arquivo`, `POST /enviar-tudo`.
 
-`enviarTudo()` from the old project was a one-off and is intentionally absent.
-If bulk sending returns, it needs the 30–45s random delay the original had —
-sending without it gets numbers banned.
+`POST /enviar-tudo` (`{numeros, texto, imagem?}`) performs asynchronous batch
+sending with a 30–45s random delay between messages to protect numbers against
+bans.
 
 ## Hard constraints (verified, do not re-litigate)
 

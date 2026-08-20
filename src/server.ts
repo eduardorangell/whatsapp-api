@@ -5,6 +5,7 @@ import {
   enviarArquivo,
   enviarImagem,
   enviarTexto,
+  enviarTudo,
   estado,
   iniciar,
   numeroValido,
@@ -33,12 +34,37 @@ function exigeTelefone(corpo: Corpo): string {
   return phone;
 }
 
+function exigeNumeros(corpo: Corpo): string[] {
+  const lista = corpo.numeros;
+  if (!Array.isArray(lista) || lista.length === 0) {
+    throw new HttpErro(
+      400,
+      "numeros deve ser um array com pelo menos 1 telefone",
+    );
+  }
+  const limpos = lista.map((p) => soDigitos(String(p ?? "")));
+  for (const phone of limpos) {
+    if (phone.length < 10 || phone.length > 18) {
+      throw new HttpErro(400, `phone inválido no lote: ${phone || "vazio"}`);
+    }
+  }
+  return limpos;
+}
+
 function exigeTexto(corpo: Corpo, campo: string, genero = "o"): string {
   const valor = corpo[campo];
   if (typeof valor !== "string" || !valor) {
     throw new HttpErro(400, `${campo} obrigatóri${genero}`);
   }
   return valor;
+}
+
+function exigeTextoOuMensagem(corpo: Corpo): string {
+  const texto = corpo.texto ?? corpo.mensagem;
+  if (typeof texto !== "string" || !texto) {
+    throw new HttpErro(400, "texto obrigatório");
+  }
+  return texto;
 }
 
 /** Envio devolve null quando o número não existe no WhatsApp. */
@@ -74,6 +100,7 @@ const rotas: Record<string, (corpo: Corpo) => unknown> = {
         exigeTelefone(c),
         exigeTexto(c, "imagem", "a"),
         String(c.legenda ?? ""),
+        env().PASTA_ARQUIVOS,
       ),
     ),
 
@@ -85,6 +112,22 @@ const rotas: Record<string, (corpo: Corpo) => unknown> = {
         exigeTexto(c, "arquivo"),
       ),
     ),
+
+  "POST /enviar-tudo": (c) => {
+    const numeros = exigeNumeros(c);
+    const texto = exigeTextoOuMensagem(c);
+    const imagem = typeof c.imagem === "string" && c.imagem
+      ? c.imagem
+      : undefined;
+    // Executa em segundo plano para não dar timeout HTTP
+    enviarTudo(numeros, texto, env().PASTA_ARQUIVOS, imagem);
+    return {
+      status: "iniciado",
+      total: numeros.length,
+      mensagem:
+        "Envio em lote iniciado em segundo plano com intervalo de segurança (30 a 45s).",
+    };
+  },
 };
 
 export async function rota(req: Request): Promise<Response> {

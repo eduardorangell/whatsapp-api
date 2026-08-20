@@ -1,1 +1,4 @@
 node_modules/
+
+tokens/
+.DS_Store

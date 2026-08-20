@@ -106,3 +106,52 @@ Deno.test("/iniciar valida phone quando informado", async () => {
     erro: "phone inválido",
   });
 });
+
+Deno.test("POST /enviar-tudo valida numeros e texto", async () => {
+  assertEquals(
+    await statusEErro(await post("/enviar-tudo", { texto: "oi" })),
+    {
+      status: 400,
+      erro: "numeros deve ser um array com pelo menos 1 telefone",
+    },
+  );
+
+  assertEquals(
+    await statusEErro(
+      await post("/enviar-tudo", { numeros: [], texto: "oi" }),
+    ),
+    {
+      status: 400,
+      erro: "numeros deve ser um array com pelo menos 1 telefone",
+    },
+  );
+
+  assertEquals(
+    await statusEErro(
+      await post("/enviar-tudo", { numeros: ["123"], texto: "oi" }),
+    ),
+    {
+      status: 400,
+      erro: "phone inválido no lote: 123",
+    },
+  );
+
+  assertEquals(
+    await statusEErro(
+      await post("/enviar-tudo", { numeros: ["5562985578421"] }),
+    ),
+    {
+      status: 400,
+      erro: "texto obrigatório",
+    },
+  );
+
+  const res = await post("/enviar-tudo", {
+    numeros: ["5562985578421", "+55 (62) 98332-8888"],
+    texto: "Olá a todos",
+  });
+  assertEquals(res.status, 200);
+  const data = await res.json();
+  assertEquals(data.status, "iniciado");
+  assertEquals(data.total, 2);
+});
