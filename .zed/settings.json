@@ -1,0 +1,58 @@
+{
+  "languages": {
+    "TypeScript": {
+      "language_servers": [
+        "deno",
+        "!vtsls",
+        "!typescript-language-server",
+        "!eslint",
+        "..."
+      ],
+      "formatter": "language_server"
+    },
+    "TSX": {
+      "language_servers": [
+        "deno",
+        "!vtsls",
+        "!typescript-language-server",
+        "!eslint",
+        "..."
+      ],
+      "formatter": "language_server"
+    },
+    "JavaScript": {
+      "language_servers": [
+        "deno",
+        "!vtsls",
+        "!typescript-language-server",
+        "!eslint",
+        "..."
+      ],
+      "formatter": "language_server"
+    },
+    "JSX": {
+      "language_servers": [
+        "deno",
+        "!vtsls",
+        "!typescript-language-server",
+        "!eslint",
+        "..."
+      ],
+      "formatter": "language_server"
+    }
+  },
+  "lsp": {
+    "deno": {
+      "settings": {
+        "deno": {
+          "enable": true,
+          "lint": true,
+          "unstable": [
+            "kv",
+            "otel"
+          ]
+        }
+      }
+    }
+  }
+}

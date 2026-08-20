@@ -55,8 +55,21 @@ docker compose down        # para (mantém a sessão)
 docker compose down -v     # para e APAGA a sessão (vai precisar parear de novo)
 ```
 
-A sessão vive no volume `kv`. A pasta `./arquivos` é montada como somente
-leitura e é de onde `/enviar-arquivo` lê.
+A sessão vive no volume gerenciado `kv` (`whatsapp-baileys_kv`), gravada como
+banco SQLite em `/data/kv.sqlite3`. A pasta local `./arquivos` é montada como
+somente leitura (`:ro`) e é de onde `/enviar-arquivo` lê os documentos.
+
+#### Backup da Sessão (Deno KV)
+
+Para inspecionar ou copiar a sessão ativa para sua máquina:
+
+```bash
+# Copiar o banco SQLite da sessão para uma pasta local
+docker cp whatsapp-baileys:/data ./backup-sessao
+
+# Inspecionar detalhes do volume gerenciado pelo Docker
+docker volume inspect whatsapp-baileys_kv
+```
 
 ## Rotas
 

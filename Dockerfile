@@ -26,7 +26,8 @@ CMD ["run", \
   "--allow-env", \
   "--allow-read", \
   "--allow-sys", \
-  "--allow-write=/data", \
+  "--allow-ffi", \
+  "--allow-write=/data,/tmp", \
   "--unstable-kv", \
   "--unstable-otel", \
   "src/server.ts"]

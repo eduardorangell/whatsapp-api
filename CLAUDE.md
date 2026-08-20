@@ -72,10 +72,11 @@ Baileys only emits `creds.update` once pairing advances, so relying on that
 event alone means a restart during the QR window regenerates the identity and
 invalidates the QR already on screen.
 
-**Deno KV: the default path needs no `--allow-write`; an explicit path does.**
-`KV_PATH` is unset in local dev (writeless) and set to `/data/kv.sqlite3` in
-Docker, where `--allow-write=/data` is scoped to just that volume. KV also
-creates `-wal`/`-shm` siblings, so the volume must be the directory.
+**Permissions (`--allow-write`, `--allow-ffi`):** Baileys uses `os.tmpdir()`
+(`/tmp`) to write temporary encrypted files before uploading media to WhatsApp
+(`--allow-write=/data,/tmp` in Docker). `sharp` is a native `.node` addon loaded
+via FFI for thumbnails and image handling (`--allow-ffi`). In local tasks
+(`dev`, `start`), both flags are enabled so operations run without prompts.
 
 ## Observability
 
