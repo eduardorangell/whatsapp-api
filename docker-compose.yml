@@ -21,6 +21,12 @@ services:
     restart: unless-stopped
     # O QR aparece aqui: docker compose up (sem -d) ou docker compose logs -f
     tty: true
+    networks:
+      - grupotodanet
 
 volumes:
   kv:
+
+networks:
+  grupotodanet:
+    external: true
