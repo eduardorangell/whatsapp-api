@@ -71,33 +71,260 @@ docker cp whatsapp-baileys:/data ./backup-sessao
 docker volume inspect whatsapp-baileys_kv
 ```
 
-## Rotas
+## Rotas e Exemplos de Uso
 
-| Método | Rota               | Corpo                       | O que faz                                              |
-| ------ | ------------------ | --------------------------- | ------------------------------------------------------ |
-| GET    | `/`                | —                           | ping                                                   |
-| GET    | `/status`          | —                           | conexão + métricas                                     |
-| POST   | `/iniciar`         | `{phone?}`                  | com `phone`: código de pareamento; sem: o QR           |
-| POST   | `/fechar`          | —                           | fecha o socket sem desparear                           |
-| POST   | `/numero-valido`   | `{phone}`                   | o número existe no WhatsApp?                           |
-| POST   | `/enviar-mensagem` | `{phone, texto}`            | envia texto                                            |
-| POST   | `/enviar-imagem`   | `{phone, imagem, legenda?}` | `imagem`: URL http(s) ou base64                        |
-| POST   | `/enviar-arquivo`  | `{phone, arquivo}`          | `arquivo`: nome dentro de `./arquivos`                 |
-| POST   | `/enviar-tudo`     | `{numeros, texto, imagem?}` | envio em lote assíncrono com delay anti-ban (30 a 45s) |
+| Método | Rota               | Corpo                       | O que faz                                             |
+| ------ | ------------------ | --------------------------- | ----------------------------------------------------- |
+| GET    | `/`                | —                           | Ping / verificação da API                             |
+| GET    | `/status`          | —                           | Conexão ativa, status do QR e métricas                |
+| POST   | `/iniciar`         | `{phone?}`                  | Inicia pareamento por código ou via QR                |
+| POST   | `/fechar`          | —                           | Desconecta o socket sem desparear a sessão            |
+| POST   | `/logout`          | —                           | Desconecta do WhatsApp e apaga a sessão do Deno KV    |
+| POST   | `/numero-valido`   | `{phone}`                   | Valida se o número possui WhatsApp ativo e obtém JID  |
+| POST   | `/enviar-mensagem` | `{phone, texto}`            | Envia mensagem de texto simples                       |
+| POST   | `/enviar-imagem`   | `{phone, imagem, legenda?}` | Envia imagem via URL, base64 ou caminho local         |
+| POST   | `/enviar-arquivo`  | `{phone, arquivo}`          | Envia documento/arquivo da pasta `./arquivos`         |
+| POST   | `/enviar-tudo`     | `{numeros, texto, imagem?}` | Dispara lote assíncrono com delay anti-ban (30 a 45s) |
+
+> O campo `phone` aceita máscara (`+55 (62) 98557-8421` ou `5562985578421`) —
+> apenas os dígitos são considerados. O JID real é consultado via WhatsApp para
+> tratar automaticamente o nono dígito de celulares brasileiros.
+>
+> **Recursos Anti-Bloqueio Nativos:**
+>
+> - **Simulação de Digitação Humana:** Antes de cada envio, o servidor ativa o
+>   status `"digitando..."` por um período proporcional ao tamanho do texto
+>   (mínimo 1.5s, máximo 10s), emulando um usuário real no WhatsApp Web.
+> - **Spintax (Variação de Texto):** Textos e legendas suportam sintaxe de
+>   rotação aleatória `{opção 1|opção 2|opção 3}` (ex:
+>   `"{Olá|Oi|Bom dia}, tudo bem?"`), evitando impressões digitais/hashes
+>   idênticos em disparos múltiplos.
+
+---
+
+### Exemplos de Requisições (cURL)
+
+#### 1. Ping (`GET /`)
+
+Verifica se o servidor HTTP está online e respondendo.
 
 ```bash
-curl -X POST localhost:3000/enviar-mensagem \
-  -d '{"phone":"+55 (62) 98557-8421","texto":"olá"}'
-
-# Envio em lote com delay de segurança
-curl -X POST localhost:3000/enviar-tudo \
-  -H "Content-Type: application/json" \
-  -d '{"numeros":["5562985578421","5562983328888"],"texto":"Olá a todos!","imagem":"./jardins.jpeg"}'
+curl -s http://localhost:3000/
 ```
 
-O `phone` aceita máscara — só os dígitos são usados. O JID nunca é montado na
-mão: `sock.onWhatsApp()` devolve o JID real, e é isso que resolve o nono dígito
-dos celulares brasileiros.
+```json
+{
+  "mensagem": "Olá"
+}
+```
+
+#### 2. Status e Métricas (`GET /status`)
+
+Exibe se o WhatsApp está conectado, se há QR pendente e as métricas de runtime.
+
+```bash
+curl -s http://localhost:3000/status
+```
+
+```json
+{
+  "online": true,
+  "sessaoIniciada": true,
+  "usuario": {
+    "id": "556293340220:25@s.whatsapp.net",
+    "name": "Suporte"
+  },
+  "qrPendente": false,
+  "ultimaDesconexao": null,
+  "metricas": {
+    "uptimeSegundos": 124,
+    "memoriaRssMb": 112.5,
+    "memoriaHeapMb": 38.2,
+    "requisicoes": 15,
+    "erros": 0,
+    "enviadas": 5,
+    "falhasDeEnvio": 0
+  }
+}
+```
+
+#### 3. Iniciar Conexão / Pareamento (`POST /iniciar`)
+
+Gera código de pareamento de 8 dígitos (se informado `phone`) ou gera o QR Code
+no terminal e na resposta.
+
+- **Via Código de Pareamento (Recomendado - sem escanear câmera):**
+
+```bash
+curl -X POST http://localhost:3000/iniciar \
+  -H "Content-Type: application/json" \
+  -d '{"phone": "5562985578421"}'
+```
+
+```json
+{
+  "status": "aguardando pareamento",
+  "codigo": "PR3L-T6PV"
+}
+```
+
+- **Via QR Code:**
+
+```bash
+curl -X POST http://localhost:3000/iniciar \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+```json
+{
+  "status": "aguardando leitura",
+  "qr": "2@4lKm...==,k5...==,1"
+}
+```
+
+#### 4. Fechar Conexão (`POST /fechar`)
+
+Desconecta o socket atual sem apagar as credenciais salvas no Deno KV.
+
+```bash
+curl -X POST http://localhost:3000/fechar
+```
+
+```json
+{
+  "finalizado": true
+}
+```
+
+#### 5. Logout Definitivo (`POST /logout`)
+
+Desconecta do WhatsApp, desvincula o aparelho na rede e remove completamente a
+sessão e chaves do Deno KV.
+
+```bash
+curl -X POST http://localhost:3000/logout
+```
+
+```json
+{
+  "deslogado": true
+}
+```
+
+#### 6. Verificar se Número Existe no WhatsApp (`POST /numero-valido`)
+
+Checa se um número possui conta no WhatsApp e devolve o JID exato.
+
+```bash
+curl -X POST http://localhost:3000/numero-valido \
+  -H "Content-Type: application/json" \
+  -d '{"phone": "+55 62 98557-8421"}'
+```
+
+```json
+{
+  "existe": true,
+  "jid": "556285578421@s.whatsapp.net"
+}
+```
+
+#### 6. Enviar Mensagem de Texto (`POST /enviar-mensagem`)
+
+Envia mensagem de texto simples.
+
+```bash
+curl -X POST http://localhost:3000/enviar-mensagem \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "5562985578421",
+    "texto": "Olá! Seu pedido #1024 foi confirmado."
+  }'
+```
+
+```json
+{
+  "jid": "556285578421@s.whatsapp.net",
+  "id": "3EB0C824E5B84F0D"
+}
+```
+
+#### 7. Enviar Imagem (`POST /enviar-imagem`)
+
+Aceita imagem por **URL HTTP(S)**, **caminho de arquivo local** ou **Data URI /
+Base64**, com legenda opcional.
+
+```bash
+# Exemplo com URL pública
+curl -X POST http://localhost:3000/enviar-imagem \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "5562985578421",
+    "imagem": "https://picsum.photos/600/400",
+    "legenda": "Confira a foto do imóvel atualizada"
+  }'
+
+# Exemplo com arquivo local na pasta de arquivos
+curl -X POST http://localhost:3000/enviar-imagem \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "5562985578421",
+    "imagem": "foto.jpeg",
+    "legenda": "Anexo local"
+  }'
+```
+
+```json
+{
+  "jid": "556285578421@s.whatsapp.net",
+  "id": "3EB0C824E5B84F0E"
+}
+```
+
+#### 8. Enviar Arquivo / Documento (`POST /enviar-arquivo`)
+
+Envia arquivos (PDF, DOCX, XLSX, etc.) localizados dentro da pasta de arquivos
+configurada (`./arquivos`).
+
+```bash
+curl -X POST http://localhost:3000/enviar-arquivo \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "5562985578421",
+    "arquivo": "contrato.pdf"
+  }'
+```
+
+```json
+{
+  "jid": "556285578421@s.whatsapp.net",
+  "id": "3EB0C824E5B84F0F"
+}
+```
+
+#### 9. Envio em Lote em Segundo Plano (`POST /enviar-tudo`)
+
+Dispara o envio para uma lista de contatos em segundo plano, aplicando um
+intervalo aleatório seguro de 30 a 45 segundos entre cada envio para proteção
+contra bloqueio/banimento.
+
+```bash
+curl -X POST http://localhost:3000/enviar-tudo \
+  -H "Content-Type: application/json" \
+  -d '{
+    "numeros": ["5562985578421", "5562983328888"],
+    "texto": "Aviso geral importante para todos os clientes.",
+    "imagem": "banner.png"
+  }'
+```
+
+```json
+{
+  "status": "iniciado",
+  "total": 2,
+  "mensagem": "Envio em lote iniciado em segundo plano com intervalo de segurança (30 a 45s)."
+}
+```
 
 ### Respostas de erro
 
