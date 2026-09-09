@@ -10,6 +10,10 @@ import {
   type SignalDataTypeMap,
 } from "baileys";
 
+export function sessaoRegistrada(creds: AuthenticationCreds): boolean {
+  return creds.registered === true || Boolean(creds.account && creds.me);
+}
+
 export async function useKvAuthState(
   kv: Deno.Kv,
   session: string,
@@ -26,6 +30,13 @@ export async function useKvAuthState(
 
   const salvas = await read<AuthenticationCreds>("creds");
   const creds = salvas ?? initAuthCreds();
+
+  // Se a sessão ainda não concluiu o pareamento, remove o `me` provisório
+  // criado por requestPairingCode para não quebrar a reconexão.
+  if (!sessaoRegistrada(creds) && creds.me) {
+    delete creds.me;
+  }
+
   // Baileys só emite "creds.update" quando o pareamento avança. Sem gravar
   // agora, um restart antes da leitura do QR geraria outra identidade e
   // invalidaria o QR que já está na tela.
@@ -66,6 +77,39 @@ export async function useKvAuthState(
         },
       },
     },
-    saveCreds: () => write(creds, "creds"),
+    saveCreds: () => {
+      // Não persiste o `me` provisório antes do pareamento ser concluído
+      if (!sessaoRegistrada(creds) && creds.me) {
+        const clone = { ...creds };
+        delete clone.me;
+        return write(clone, "creds");
+      }
+      return write(creds, "creds");
+    },
   };
+}
+
+/** Verifica se já existe uma sessão previamente autenticada no KV. */
+export async function temSessaoValida(
+  kv: Deno.Kv,
+  session: string,
+): Promise<boolean> {
+  const { value } = await kv.get<string>(["wa", session, "creds"]);
+  if (!value) return false;
+  try {
+    const creds = JSON.parse(value) as AuthenticationCreds;
+    return sessaoRegistrada(creds);
+  } catch {
+    return false;
+  }
+}
+
+/** Remove todos os registros (creds e chaves criptográficas) de uma sessão no KV. */
+export async function limparSessao(
+  kv: Deno.Kv,
+  session: string,
+): Promise<void> {
+  for await (const entry of kv.list({ prefix: ["wa", session] })) {
+    await kv.delete(entry.key);
+  }
 }

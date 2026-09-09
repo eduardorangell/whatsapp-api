@@ -1,6 +1,7 @@
 // API HTTP em Deno puro: Deno.serve + uma tabela de rotas. Sem framework.
 import {
   conectar,
+  configurarWa,
   desconectar,
   enviarArquivo,
   enviarImagem,
@@ -8,9 +9,11 @@ import {
   enviarTudo,
   estado,
   iniciar,
+  logout,
   numeroValido,
   soDigitos,
 } from "./wa.ts";
+import { temSessaoValida } from "./auth-kv.ts";
 import env from "./env.ts";
 import { contadores, detalhesDoErro, log, resumo } from "./obs.ts";
 
@@ -85,6 +88,8 @@ const rotas: Record<string, (corpo: Corpo) => unknown> = {
     iniciar(c.phone === undefined ? undefined : exigeTelefone(c)),
 
   "POST /fechar": () => ({ finalizado: desconectar() }),
+
+  "POST /logout": async () => ({ deslogado: await logout() }),
 
   "POST /numero-valido": async (c) => {
     const jid = await numeroValido(exigeTelefone(c));
@@ -185,7 +190,19 @@ export async function comObservabilidade(req: Request): Promise<Response> {
 if (import.meta.main) {
   const { PORT, SESSAO, KV_PATH } = env();
   const kv = await Deno.openKv(KV_PATH);
-  await conectar(kv, SESSAO);
+  configurarWa(kv, SESSAO);
+
+  const jaRegistrado = await temSessaoValida(kv, SESSAO);
+  if (jaRegistrado) {
+    log("info", "sessao_existente_reconectando", { sessao: SESSAO });
+    await conectar(kv, SESSAO, { modo: "qr" });
+  } else {
+    log("info", "aguardando_iniciar", {
+      sessao: SESSAO,
+      mensagem: "Nenhuma sessão ativa. Chame POST /iniciar para conectar.",
+    });
+  }
+
   Deno.serve({
     port: PORT,
     onListen: ({ hostname, port }) =>

@@ -3,12 +3,15 @@ import {
   assertNotEquals,
   assertStringIncludes,
 } from "@std/assert";
-import { useKvAuthState } from "./auth-kv.ts";
+import type { AuthenticationCreds } from "baileys";
+import { sessaoRegistrada, useKvAuthState } from "./auth-kv.ts";
 import {
   caminhoSeguro,
   decodificaImagem,
   estado,
+  resolverSpintax,
   soDigitos,
+  tempoDigitandoMs,
   tipoDoArquivo,
 } from "./wa.ts";
 
@@ -55,4 +58,46 @@ Deno.test("useKvAuthState grava creds novas na hora", async () => {
   const { state: outra } = await useKvAuthState(kv, "t2");
   assertNotEquals(outra.creds.registrationId, state.creds.registrationId);
   kv.close();
+});
+
+Deno.test("sessaoRegistrada valida registered ou presenca de account e me", () => {
+  // Provisório durante pareamento (não registrado)
+  assertEquals(
+    sessaoRegistrada({
+      registered: false,
+      me: { id: "556299999999@s.whatsapp.net" },
+    } as unknown as AuthenticationCreds),
+    false,
+  );
+  // Pareamento concluído com account e me
+  assertEquals(
+    sessaoRegistrada({
+      registered: false,
+      me: { id: "556299999999@s.whatsapp.net" },
+      account: {},
+    } as unknown as AuthenticationCreds),
+    true,
+  );
+  // Totalmente registrado
+  assertEquals(
+    sessaoRegistrada({
+      registered: true,
+    } as unknown as AuthenticationCreds),
+    true,
+  );
+});
+
+Deno.test("resolverSpintax sorteia opções entre chaves", () => {
+  const opcoes = ["Olá", "Oi", "E aí"];
+  const res = resolverSpintax("{Olá|Oi|E aí}, mundo!");
+  const prefixo = res.replace(", mundo!", "");
+  assertEquals(opcoes.includes(prefixo), true);
+  assertEquals(
+    resolverSpintax("Texto fixo sem chaves"),
+    "Texto fixo sem chaves",
+  );
+});
+
+Deno.test("tempoDigitandoMs retorna 0 em ambiente de teste", () => {
+  assertEquals(tempoDigitandoMs("Olá mundo curto"), 0);
 });

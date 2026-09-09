@@ -9,7 +9,8 @@ import qrcode from "qrcode-terminal";
 import { decodeBase64 } from "@std/encoding/base64";
 import { contentType } from "@std/media-types";
 import { basename, extname, join } from "@std/path";
-import { useKvAuthState } from "./auth-kv.ts";
+import { bold, cyan, yellow } from "@std/fmt/colors";
+import { limparSessao, temSessaoValida, useKvAuthState } from "./auth-kv.ts";
 import { contadores, log } from "./obs.ts";
 
 type Logger = NonNullable<Parameters<typeof makeWASocket>[0]["logger"]>;
@@ -31,6 +32,15 @@ let desligadoDeProposito = false;
 let ultimaDesconexao:
   | { quando: string; motivo: string; codigo?: number }
   | null = null;
+
+let kvConfig: Deno.Kv | null = null;
+let sessaoConfig: string | null = null;
+let modoConexao: "qr" | "pairing" = "qr";
+
+export function configurarWa(kv: Deno.Kv, sessao: string) {
+  kvConfig = kv;
+  sessaoConfig = sessao;
+}
 
 // ---------- helpers puros (testáveis sem conexão) ----------
 
@@ -62,9 +72,34 @@ export function estado() {
   };
 }
 
-export async function conectar(kv: Deno.Kv, sessao: string) {
+export async function conectar(
+  kv?: Deno.Kv,
+  sessao?: string,
+  opcoes?: { modo?: "qr" | "pairing"; phone?: string },
+) {
+  if (kv) kvConfig = kv;
+  if (sessao) sessaoConfig = sessao;
+  if (!kvConfig || !sessaoConfig) {
+    throw new Error("KV ou sessão não configurados");
+  }
+
+  const s = sessaoConfig;
+  const k = kvConfig;
+  modoConexao = opcoes?.modo ?? "qr";
   desligadoDeProposito = false;
-  const { state, saveCreds } = await useKvAuthState(kv, sessao);
+
+  if (sock) {
+    try {
+      sock.ev.removeAllListeners("connection.update");
+      sock.ev.removeAllListeners("creds.update");
+      sock.end(undefined);
+    } catch {
+      // socket já encerrado
+    }
+    sock = null;
+  }
+
+  const { state, saveCreds } = await useKvAuthState(k, s);
 
   sock = makeWASocket({
     auth: state,
@@ -75,16 +110,19 @@ export async function conectar(kv: Deno.Kv, sessao: string) {
   sock.ev.on("creds.update", saveCreds);
 
   sock.ev.on("connection.update", ({ connection, qr, lastDisconnect }) => {
-    if (qr) {
+    if (qr && !online) {
       ultimoQr = qr;
-      log("info", "qr_gerado", { sessao });
-      // QR vai cru no stdout de propósito: dentro de JSON vira lixo ilegível.
-      qrcode.generate(qr, { small: true });
+      log("info", "qr_gerado", { sessao: s });
+      // Só exibe o QR no terminal se o modo NÃO for pareamento por telefone
+      if (modoConexao !== "pairing") {
+        qrcode.generate(qr, { small: true });
+      }
     }
     if (connection === "open") {
       online = true;
       ultimoQr = null;
-      log("info", "conectado", { sessao, usuario: sock?.user?.id });
+      modoConexao = "qr";
+      log("info", "conectado", { sessao: s, usuario: sock?.user?.id });
     }
     if (connection === "close") {
       online = false;
@@ -95,23 +133,48 @@ export async function conectar(kv: Deno.Kv, sessao: string) {
       ultimaDesconexao = { quando: new Date().toISOString(), motivo, codigo };
 
       if (desligadoDeProposito) {
-        log("info", "desconectado", { sessao, motivo: "fechado via /fechar" });
+        log("info", "desconectado", {
+          sessao: s,
+          motivo: "fechado via /fechar",
+        });
         return;
       }
 
       if (codigo === DisconnectReason.loggedOut) {
         log("erro", "deslogado", {
-          sessao,
+          sessao: s,
           motivo,
           acao: "apague a sessão do KV e pareie de novo",
+        });
+        void limparSessao(k, s);
+        sock = null;
+        return;
+      }
+
+      if (codigo === DisconnectReason.connectionReplaced) {
+        log("erro", "conflito_sessao", {
+          sessao: s,
+          motivo: "sessão conectada em outro cliente (connectionReplaced 440)",
         });
         sock = null;
         return;
       }
-      log("erro", "reconectando", { sessao, motivo, codigo });
-      conectar(kv, sessao);
+
+      if (codigo === DisconnectReason.timedOut && motivo.includes("QR refs")) {
+        log("info", "qr_expirado", {
+          sessao: s,
+          motivo: "tempo limite de leitura do QR code expirou",
+        });
+        sock = null;
+        return;
+      }
+
+      log("erro", "reconectando", { sessao: s, motivo, codigo });
+      conectar(k, s, { modo: modoConexao });
     }
   });
+
+  return sock;
 }
 
 /** Fecha o socket sem desparear: a sessão continua válida no KV. */
@@ -125,16 +188,74 @@ export function desconectar() {
   return true;
 }
 
-/** QR atual, ou código de pareamento de 8 dígitos se `phone` for informado. */
+/** Desconecta do WhatsApp, desvincula o aparelho no servidor e apaga a sessão no KV. */
+export async function logout() {
+  if (sock) {
+    try {
+      await sock.logout("Logout solicitado");
+    } catch {
+      // socket já pode estar offline
+    }
+  }
+  desconectar();
+  if (kvConfig && sessaoConfig) {
+    await limparSessao(kvConfig, sessaoConfig);
+  }
+  return true;
+}
+
+const prontoOuQr = (u: { qr?: string; connection?: string }) =>
+  Promise.resolve(Boolean(u.qr || u.connection === "open"));
+
+/** Inicia conexão via QR Code ou via código de pareamento de 8 dígitos se `phone` for informado. */
 export async function iniciar(phone?: string) {
   if (online) return { status: "já conectado", usuario: sock?.user ?? null };
-  if (!sock) return { status: "sessão não iniciada" };
+  if (!kvConfig || !sessaoConfig) return { status: "sessão não iniciada" };
+
+  desconectar();
+
+  const jaRegistrado = await temSessaoValida(kvConfig, sessaoConfig);
+  if (!jaRegistrado) await limparSessao(kvConfig, sessaoConfig);
+
+  const modo = phone ? "pairing" : "qr";
+  const s = await conectar(kvConfig, sessaoConfig, { modo, phone });
+
   if (phone) {
-    return { codigo: await sock.requestPairingCode(soDigitos(phone)) };
+    const cleanPhone = soDigitos(phone);
+    try {
+      await s.waitForConnectionUpdate(prontoOuQr, 15000);
+      const rawCode = await s.requestPairingCode(cleanPhone);
+      const codigo = rawCode?.match(/.{1,4}/g)?.join("-") || rawCode;
+
+      log("info", "codigo_pareamento", { phone: cleanPhone, codigo });
+      console.log(`\n${bold(cyan("=".repeat(45)))}`);
+      console.log(
+        `  ${bold("Código de Pareamento WhatsApp:")} ${bold(yellow(codigo))}`,
+      );
+      console.log(`${bold(cyan("=".repeat(45)))}\n`);
+
+      return { status: "aguardando pareamento", codigo };
+    } catch (err) {
+      log("erro", "falha_codigo_pareamento", { erro: String(err) });
+      desconectar();
+      await limparSessao(kvConfig, sessaoConfig);
+      throw new Error(
+        `Falha ao obter código de pareamento: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
   }
+
+  try {
+    await s.waitForConnectionUpdate(prontoOuQr, 5000);
+  } catch {
+    // Timeout aguardando primeiro QR, prossegue
+  }
+
   return {
-    qr: ultimoQr,
     status: ultimoQr ? "aguardando leitura" : "conectando",
+    qr: ultimoQr,
   };
 }
 
@@ -151,11 +272,46 @@ export async function numeroValido(phone: string) {
   return achado?.exists ? achado.jid : null;
 }
 
+/** Resolve variações de texto no formato {opcao 1|opcao 2|opcao 3}. */
+export function resolverSpintax(texto: string): string {
+  return texto.replace(/\{([^{}]+)\}/g, (_, opcoes) => {
+    const itens = opcoes.split("|");
+    return itens[Math.floor(Math.random() * itens.length)].trim();
+  });
+}
+
+/**
+ * Calcula tempo realista de digitação humana baseado no tamanho do texto.
+ * ~25 caracteres/segundo, piso de 1.5s e teto de 10s + variação aleatória.
+ */
+export function tempoDigitandoMs(texto: string): number {
+  if (Deno.env.get("DENO_ENV") === "test") return 0;
+  const chars = texto.trim().length;
+  const baseSegundos = Math.min(10, Math.max(1.5, chars / 25));
+  const variacao = Math.random() * 0.8;
+  return Math.floor((baseSegundos + variacao) * 1000);
+}
+
+/** Simula presença "digitando..." proporcional ao tamanho da mensagem antes do envio. */
+export async function simularDigitando(jid: string, texto: string) {
+  const ms = tempoDigitandoMs(texto);
+  if (ms <= 0) return;
+  try {
+    await socket().sendPresenceUpdate("composing", jid);
+    await delayMs(ms);
+    await socket().sendPresenceUpdate("paused", jid);
+  } catch {
+    // Ignora se presença falhar
+  }
+}
+
 /** Retorna null se o número não existe no WhatsApp. */
 export async function enviarTexto(phone: string, texto: string) {
   const jid = await numeroValido(phone);
   if (!jid) return null;
-  const msg = await socket().sendMessage(jid, { text: texto });
+  const textoFinal = resolverSpintax(texto);
+  await simularDigitando(jid, textoFinal);
+  const msg = await socket().sendMessage(jid, { text: textoFinal });
   contadores.enviadas++;
   log("info", "enviado", { tipo: "texto", jid, id: msg?.key.id });
   return { jid, id: msg?.key.id };
@@ -201,10 +357,14 @@ export async function enviarImagem(
 ) {
   const jid = await numeroValido(phone);
   if (!jid) return null;
+  const legendaFinal = resolverSpintax(legenda);
+  if (legendaFinal) {
+    await simularDigitando(jid, legendaFinal);
+  }
   const conteudo = await resolverImagemConteudo(imagem, pastaArquivos);
   const msg = await socket().sendMessage(jid, {
     image: conteudo,
-    caption: legenda,
+    caption: legendaFinal,
   });
   contadores.enviadas++;
   log("info", "enviado", { tipo: "imagem", jid, id: msg?.key.id });

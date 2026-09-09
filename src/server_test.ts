@@ -93,11 +93,14 @@ Deno.test("payload válido sem conexão dá 503", async () => {
   });
 });
 
-Deno.test("/iniciar e /fechar respondem sem corpo", async () => {
+Deno.test("/iniciar, /fechar e /logout respondem sem corpo", async () => {
   assertEquals((await post("/iniciar")).status, 200);
   const fechar = await post("/fechar");
   assertEquals(fechar.status, 200);
   assertEquals((await fechar.json()).finalizado, false);
+  const logout = await post("/logout");
+  assertEquals(logout.status, 200);
+  assertEquals((await logout.json()).deslogado, true);
 });
 
 Deno.test("/iniciar valida phone quando informado", async () => {
