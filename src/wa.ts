@@ -105,6 +105,7 @@ export async function conectar(
     auth: state,
     browser: Browsers.ubuntu("Chrome"),
     logger: silentLogger(),
+    syncFullHistory: false,
   });
 
   sock.ev.on("creds.update", saveCreds);
