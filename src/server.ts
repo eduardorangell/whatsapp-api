@@ -10,8 +10,8 @@ import {
   estado,
   iniciar,
   logout,
+  normalizarTelefone,
   numeroValido,
-  soDigitos,
 } from "./wa.ts";
 import { temSessaoValida } from "./auth-kv.ts";
 import env from "./env.ts";
@@ -30,7 +30,7 @@ const json = (corpo: unknown, status = 200) => Response.json(corpo, { status });
 // ---------- validação de entrada ----------
 
 function exigeTelefone(corpo: Corpo): string {
-  const phone = soDigitos(String(corpo.phone ?? ""));
+  const phone = normalizarTelefone(String(corpo.phone ?? ""));
   if (phone.length < 10 || phone.length > 18) {
     throw new HttpErro(400, "phone inválido");
   }
@@ -45,7 +45,7 @@ function exigeNumeros(corpo: Corpo): string[] {
       "numeros deve ser um array com pelo menos 1 telefone",
     );
   }
-  const limpos = lista.map((p) => soDigitos(String(p ?? "")));
+  const limpos = lista.map((p) => normalizarTelefone(String(p ?? "")));
   for (const phone of limpos) {
     if (phone.length < 10 || phone.length > 18) {
       throw new HttpErro(400, `phone inválido no lote: ${phone || "vazio"}`);

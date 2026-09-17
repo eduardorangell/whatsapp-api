@@ -47,6 +47,33 @@ export function configurarWa(kv: Deno.Kv, sessao: string) {
 /** Só os dígitos: aceita "+55 (62) 98557-8421" e devolve "5562985578421". */
 export const soDigitos = (phone: string) => phone.replace(/\D/g, "");
 
+/**
+ * Remove formatação e normaliza DDI brasileiro (prefixa 55 se vier com 10 ou 11 dígitos sem DDI).
+ * Se o número já começar com '+' (internacional) ou '55', preserva o DDI informado.
+ */
+export function normalizarTelefone(phone: string): string {
+  const raw = phone.trim();
+  const limpo = raw.replace(/\D/g, "");
+  if (!limpo) return "";
+
+  // Já começa com DDI 55 e tem tamanho de telefone brasileiro com DDI (12 ou 13 dígitos)
+  if (limpo.startsWith("55") && (limpo.length === 12 || limpo.length === 13)) {
+    return limpo;
+  }
+
+  // Se começou explicitamente com "+" e outro país (ex: +1...), preserva internacional
+  if (raw.startsWith("+") && !raw.startsWith("+55")) {
+    return limpo;
+  }
+
+  // Se tem 10 dígitos (DDD + 8 dígitos) ou 11 dígitos (DDD + 9 dígitos), insere DDI 55
+  if (limpo.length === 10 || limpo.length === 11) {
+    return `55${limpo}`;
+  }
+
+  return limpo;
+}
+
 /** Aceita data URI ("data:image/jpeg;base64,...") ou base64 puro. */
 export function decodificaImagem(entrada: string): Uint8Array {
   const virgula = entrada.startsWith("data:") ? entrada.indexOf(",") + 1 : 0;
@@ -222,7 +249,7 @@ export async function iniciar(phone?: string) {
   const s = await conectar(kvConfig, sessaoConfig, { modo, phone });
 
   if (phone) {
-    const cleanPhone = soDigitos(phone);
+    const cleanPhone = normalizarTelefone(phone);
     try {
       await s.waitForConnectionUpdate(prontoOuQr, 15000);
       const rawCode = await s.requestPairingCode(cleanPhone);
@@ -269,7 +296,7 @@ function socket(): WASocket {
 
 /** Resolve o JID real. Cobre o 9º dígito de celular brasileiro sem gambiarra. */
 export async function numeroValido(phone: string) {
-  const achado = (await socket().onWhatsApp(soDigitos(phone)))?.[0];
+  const achado = (await socket().onWhatsApp(normalizarTelefone(phone)))?.[0];
   return achado?.exists ? achado.jid : null;
 }
 
@@ -417,13 +444,23 @@ export async function enviarTudo(
   log("info", "lote_iniciado", { total: numeros.length, temImagem: !!imagem });
 
   for (const [idx, num] of numeros.entries()) {
+    let enviado = false;
     try {
-      if (imagem) {
-        await enviarImagem(num, imagem, texto, pastaArquivos);
+      const res = imagem
+        ? await enviarImagem(num, imagem, texto, pastaArquivos)
+        : await enviarTexto(num, texto);
+      if (!res) {
+        contadores.falhasDeEnvio++;
+        log("aviso", "numero_sem_whatsapp", {
+          numero: num,
+          indice: idx + 1,
+          total: numeros.length,
+        });
       } else {
-        await enviarTexto(num, texto);
+        enviado = true;
       }
     } catch (e) {
+      contadores.falhasDeEnvio++;
       log("erro", "falha_lote", {
         numero: num,
         indice: idx + 1,
@@ -432,11 +469,16 @@ export async function enviarTudo(
     }
 
     if (idx < numeros.length - 1) {
-      const espera = tempoDeEsperaAleatorio(30, 45);
+      // Se enviado com sucesso, cumpre intervalo de segurança anti-ban (30-45s).
+      // Se o número não tem WhatsApp ou deu erro, pausa curta (2-5s) para não travar a fila.
+      const espera = enviado
+        ? tempoDeEsperaAleatorio(30, 45)
+        : tempoDeEsperaAleatorio(2, 5);
       log("info", "lote_aguardando", {
         segundos: espera / 1000,
         proximo: idx + 2,
         total: numeros.length,
+        motivo: enviado ? "intervalo_seguranca" : "numero_ignorado",
       });
       await delayMs(espera);
     }

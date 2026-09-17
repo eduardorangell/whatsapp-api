@@ -12,14 +12,17 @@ import { comObservabilidade } from "./server.ts";
 /** Captura o que sai no console durante `fn`. */
 async function capturado(fn: () => unknown | Promise<unknown>) {
   const linhas: string[] = [];
-  const { log: infoOriginal, error: erroOriginal } = console;
+  const { log: infoOriginal, error: erroOriginal, warn: avisoOriginal } =
+    console;
   console.log = (l: string) => linhas.push(l);
   console.error = (l: string) => linhas.push(l);
+  console.warn = (l: string) => linhas.push(l);
   try {
     await fn();
   } finally {
     console.log = infoOriginal;
     console.error = erroOriginal;
+    console.warn = avisoOriginal;
   }
   return linhas;
 }

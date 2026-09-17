@@ -9,6 +9,7 @@ import {
   caminhoSeguro,
   decodificaImagem,
   estado,
+  normalizarTelefone,
   resolverSpintax,
   soDigitos,
   tempoDigitandoMs,
@@ -18,6 +19,16 @@ import {
 Deno.test("soDigitos limpa a máscara do telefone", () => {
   assertEquals(soDigitos("+55 (62) 98557-8421"), "5562985578421");
   assertEquals(soDigitos(""), "");
+});
+
+Deno.test("normalizarTelefone adiciona DDI 55 quando ausente", () => {
+  assertEquals(normalizarTelefone("62998510258"), "5562998510258");
+  assertEquals(normalizarTelefone("6236375029"), "556236375029");
+  assertEquals(normalizarTelefone("(62) 99851-0258"), "5562998510258");
+  assertEquals(normalizarTelefone("5562985578421"), "5562985578421");
+  assertEquals(normalizarTelefone("+55 (62) 98557-8421"), "5562985578421");
+  assertEquals(normalizarTelefone("+1 555 234 5678"), "15552345678");
+  assertEquals(normalizarTelefone(""), "");
 });
 
 Deno.test("decodificaImagem aceita data URI e base64 puro", () => {

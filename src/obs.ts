@@ -7,7 +7,7 @@
 
 import { bold, cyan, gray, green, magenta, red, yellow } from "@std/fmt/colors";
 
-type Nivel = "info" | "erro";
+type Nivel = "info" | "erro" | "aviso";
 
 export const contadores = {
   requisicoes: 0,
@@ -21,9 +21,9 @@ const inicio = Date.now();
 function colorirValor(chave: string, valor: unknown): string {
   if (valor === null || valor === undefined) return gray(String(valor));
   if (chave === "nivel") {
-    return valor === "erro"
-      ? bold(red(`"${valor}"`))
-      : bold(green(`"${valor}"`));
+    if (valor === "erro") return bold(red(`"${valor}"`));
+    if (valor === "aviso") return bold(yellow(`"${valor}"`));
+    return bold(green(`"${valor}"`));
   }
   if (chave === "status" && typeof valor === "number") {
     if (valor >= 500) return bold(red(String(valor)));
@@ -98,12 +98,14 @@ export function log(
       ...dados,
     });
     if (nivel === "erro") console.error(linha);
+    else if (nivel === "aviso") console.warn(linha);
     else console.log(linha);
     return;
   }
 
   const linhaFormatada = formatarLog(nivel, evento, dados);
   if (nivel === "erro") console.error(linhaFormatada);
+  else if (nivel === "aviso") console.warn(linhaFormatada);
   else console.log(linhaFormatada);
 }
 
