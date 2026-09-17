@@ -306,15 +306,17 @@ curl -X POST http://localhost:3000/enviar-arquivo \
 
 Dispara o envio para uma lista de contatos em segundo plano, aplicando um
 intervalo aleatório seguro de 30 a 45 segundos entre cada envio para proteção
-contra bloqueio/banimento.
+contra bloqueio/banimento. Suporta também `diasCooldown` para pular leads que já
+receberam mensagens recentemente.
 
 ```bash
 curl -X POST http://localhost:3000/enviar-tudo \
   -H "Content-Type: application/json" \
   -d '{
-    "numeros": ["5562985578421", "5562983328888"],
-    "texto": "Aviso geral importante para todos os clientes.",
-    "imagem": "banner.png"
+    "numeros": ["5562985578421", "62998510258"],
+    "texto": "{Olá|Oi}, tudo bem?",
+    "imagem": "banner.png",
+    "diasCooldown": 15
   }'
 ```
 
@@ -322,9 +324,46 @@ curl -X POST http://localhost:3000/enviar-tudo \
 {
   "status": "iniciado",
   "total": 2,
+  "diasCooldown": 15,
   "mensagem": "Envio em lote iniciado em segundo plano com intervalo de segurança (30 a 45s)."
 }
 ```
+
+#### 10. Base de Leads (`GET /leads`, `/leads/resumo`, `/leads/exportar`)
+
+A API alimenta automaticamente uma base de leads persistida no Deno KV com todos
+os números validados, enviados ou rejeitados:
+
+- **Listar leads com filtros (`GET /leads`):**
+  ```bash
+  curl -s "http://localhost:3000/leads?status=valido&limite=50"
+  ```
+  _(Status suportados: `valido`, `enviado`, `sem_whatsapp`, `falha`)_
+
+- **Resumo consolidado da base (`GET /leads/resumo`):**
+  ```bash
+  curl -s http://localhost:3000/leads/resumo
+  ```
+  ```json
+  {
+    "total": 31,
+    "porStatus": {
+      "valido": 13,
+      "enviado": 10,
+      "sem_whatsapp": 8,
+      "falha": 0
+    }
+  }
+  ```
+
+- **Exportar números para prospecção (`GET /leads/exportar`):**
+  ```bash
+  # Em formato TXT (um número por linha, pronto para copiar):
+  curl -s "http://localhost:3000/leads/exportar?status=valido&formato=txt"
+
+  # Em formato JSON:
+  curl -s "http://localhost:3000/leads/exportar?status=valido"
+  ```
 
 ### Respostas de erro
 

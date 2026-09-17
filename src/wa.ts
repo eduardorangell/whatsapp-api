@@ -11,6 +11,11 @@ import { contentType } from "@std/media-types";
 import { basename, extname, join } from "@std/path";
 import { bold, cyan, yellow } from "@std/fmt/colors";
 import { limparSessao, temSessaoValida, useKvAuthState } from "./auth-kv.ts";
+import {
+  devePularPorCooldown,
+  obterLead,
+  salvarOuAtualizarLead,
+} from "./leads.ts";
 import { contadores, log } from "./obs.ts";
 
 type Logger = NonNullable<Parameters<typeof makeWASocket>[0]["logger"]>;
@@ -40,6 +45,10 @@ let modoConexao: "qr" | "pairing" = "qr";
 export function configurarWa(kv: Deno.Kv, sessao: string) {
   kvConfig = kv;
   sessaoConfig = sessao;
+}
+
+export function obterKv(): Deno.Kv | null {
+  return kvConfig;
 }
 
 // ---------- helpers puros (testáveis sem conexão) ----------
@@ -334,14 +343,37 @@ export async function simularDigitando(jid: string, texto: string) {
 }
 
 /** Retorna null se o número não existe no WhatsApp. */
-export async function enviarTexto(phone: string, texto: string) {
-  const jid = await numeroValido(phone);
-  if (!jid) return null;
+export async function enviarTexto(
+  phone: string,
+  texto: string,
+  origem = "enviar-mensagem",
+) {
+  const tel = normalizarTelefone(phone);
+  const jid = await numeroValido(tel);
+  if (!jid) {
+    if (kvConfig) {
+      await salvarOuAtualizarLead(kvConfig, {
+        phone: tel,
+        status: "sem_whatsapp",
+        origem,
+      });
+    }
+    return null;
+  }
   const textoFinal = resolverSpintax(texto);
   await simularDigitando(jid, textoFinal);
   const msg = await socket().sendMessage(jid, { text: textoFinal });
   contadores.enviadas++;
   log("info", "enviado", { tipo: "texto", jid, id: msg?.key.id });
+  if (kvConfig) {
+    await salvarOuAtualizarLead(kvConfig, {
+      phone: tel,
+      jid,
+      status: "enviado",
+      origem,
+      mensagemId: msg?.key.id ?? undefined,
+    });
+  }
   return { jid, id: msg?.key.id };
 }
 
@@ -382,9 +414,20 @@ export async function enviarImagem(
   imagem: string,
   legenda: string,
   pastaArquivos?: string,
+  origem = "enviar-imagem",
 ) {
-  const jid = await numeroValido(phone);
-  if (!jid) return null;
+  const tel = normalizarTelefone(phone);
+  const jid = await numeroValido(tel);
+  if (!jid) {
+    if (kvConfig) {
+      await salvarOuAtualizarLead(kvConfig, {
+        phone: tel,
+        status: "sem_whatsapp",
+        origem,
+      });
+    }
+    return null;
+  }
   const legendaFinal = resolverSpintax(legenda);
   if (legendaFinal) {
     await simularDigitando(jid, legendaFinal);
@@ -396,6 +439,15 @@ export async function enviarImagem(
   });
   contadores.enviadas++;
   log("info", "enviado", { tipo: "imagem", jid, id: msg?.key.id });
+  if (kvConfig) {
+    await salvarOuAtualizarLead(kvConfig, {
+      phone: tel,
+      jid,
+      status: "enviado",
+      origem,
+      mensagemId: msg?.key.id ?? undefined,
+    });
+  }
   return { jid, id: msg?.key.id };
 }
 
@@ -404,9 +456,20 @@ export async function enviarArquivo(
   phone: string,
   pasta: string,
   arquivo: string,
+  origem = "enviar-arquivo",
 ) {
-  const jid = await numeroValido(phone);
-  if (!jid) return null;
+  const tel = normalizarTelefone(phone);
+  const jid = await numeroValido(tel);
+  if (!jid) {
+    if (kvConfig) {
+      await salvarOuAtualizarLead(kvConfig, {
+        phone: tel,
+        status: "sem_whatsapp",
+        origem,
+      });
+    }
+    return null;
+  }
   const caminho = caminhoSeguro(pasta, arquivo);
   const bytes = await Deno.readFile(caminho); // NotFound sobe pro server
   const msg = await socket().sendMessage(jid, {
@@ -421,6 +484,15 @@ export async function enviarArquivo(
     id: msg?.key.id,
     bytes: bytes.byteLength,
   });
+  if (kvConfig) {
+    await salvarOuAtualizarLead(kvConfig, {
+      phone: tel,
+      jid,
+      status: "enviado",
+      origem,
+      mensagemId: msg?.key.id ?? undefined,
+    });
+  }
   return { jid, id: msg?.key.id };
 }
 
@@ -434,25 +506,47 @@ export const tempoDeEsperaAleatorio = (min = 30, max = 45) =>
     ? 0
     : (Math.floor(Math.random() * (max - min + 1)) + min) * 1000;
 
-/** Envio em lote assíncrono com delay anti-banimento (30-45s). */
+/** Envio em lote assíncrono com delay anti-banimento (30-45s) e suporte a cooldown. */
 export async function enviarTudo(
   numeros: string[],
   texto: string,
   pastaArquivos: string,
   imagem?: string,
+  diasCooldown?: number,
 ) {
-  log("info", "lote_iniciado", { total: numeros.length, temImagem: !!imagem });
+  log("info", "lote_iniciado", {
+    total: numeros.length,
+    temImagem: !!imagem,
+    diasCooldown: diasCooldown ?? null,
+  });
 
   for (const [idx, num] of numeros.entries()) {
+    const tel = normalizarTelefone(num);
+
+    // Verificação de Cooldown (deduplicação anti-spam)
+    if (kvConfig && diasCooldown && diasCooldown > 0) {
+      const lead = await obterLead(kvConfig, tel);
+      if (devePularPorCooldown(lead, diasCooldown)) {
+        log("info", "lote_pulado_cooldown", {
+          numero: tel,
+          indice: idx + 1,
+          total: numeros.length,
+          diasCooldown,
+          ultimoContatoEm: lead?.ultimoContatoEm,
+        });
+        continue;
+      }
+    }
+
     let enviado = false;
     try {
       const res = imagem
-        ? await enviarImagem(num, imagem, texto, pastaArquivos)
-        : await enviarTexto(num, texto);
+        ? await enviarImagem(tel, imagem, texto, pastaArquivos, "enviar-tudo")
+        : await enviarTexto(tel, texto, "enviar-tudo");
       if (!res) {
         contadores.falhasDeEnvio++;
         log("aviso", "numero_sem_whatsapp", {
-          numero: num,
+          numero: tel,
           indice: idx + 1,
           total: numeros.length,
         });
@@ -461,8 +555,16 @@ export async function enviarTudo(
       }
     } catch (e) {
       contadores.falhasDeEnvio++;
+      if (kvConfig) {
+        await salvarOuAtualizarLead(kvConfig, {
+          phone: tel,
+          status: "falha",
+          origem: "enviar-tudo",
+          erro: e instanceof Error ? e.message : String(e),
+        });
+      }
       log("erro", "falha_lote", {
-        numero: num,
+        numero: tel,
         indice: idx + 1,
         erro: e instanceof Error ? e.message : String(e),
       });

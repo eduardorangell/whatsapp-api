@@ -152,9 +152,38 @@ Deno.test("POST /enviar-tudo valida numeros e texto", async () => {
   const res = await post("/enviar-tudo", {
     numeros: ["5562985578421", "+55 (62) 98332-8888"],
     texto: "Olá a todos",
+    diasCooldown: 7,
   });
   assertEquals(res.status, 200);
   const data = await res.json();
   assertEquals(data.status, "iniciado");
   assertEquals(data.total, 2);
+  assertEquals(data.diasCooldown, 7);
+});
+
+Deno.test("rotas de leads: listar, resumo e exportar", async () => {
+  const resLeads = await chamar("GET", "/leads");
+  assertEquals(resLeads.status, 200);
+  const dataLeads = await resLeads.json();
+  assertEquals(typeof dataLeads.total, "number");
+  assertEquals(Array.isArray(dataLeads.leads), true);
+
+  const resResumo = await chamar("GET", "/leads/resumo");
+  assertEquals(resResumo.status, 200);
+  const dataResumo = await resResumo.json();
+  assertEquals(typeof dataResumo.total, "number");
+  assertEquals(typeof dataResumo.porStatus, "object");
+
+  const resExportarJson = await chamar("GET", "/leads/exportar");
+  assertEquals(resExportarJson.status, 200);
+  const dataExp = await resExportarJson.json();
+  assertEquals(typeof dataExp.total, "number");
+  assertEquals(Array.isArray(dataExp.numeros), true);
+
+  const resExportarTxt = await chamar("GET", "/leads/exportar?formato=txt");
+  assertEquals(resExportarTxt.status, 200);
+  assertEquals(
+    resExportarTxt.headers.get("Content-Type"),
+    "text/plain; charset=utf-8",
+  );
 });

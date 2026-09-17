@@ -12,12 +12,29 @@ import {
   logout,
   normalizarTelefone,
   numeroValido,
+  obterKv,
 } from "./wa.ts";
 import { temSessaoValida } from "./auth-kv.ts";
 import env from "./env.ts";
+import {
+  listarLeads,
+  resumoLeads,
+  salvarOuAtualizarLead,
+  type StatusLead,
+} from "./leads.ts";
 import { contadores, detalhesDoErro, log, resumo } from "./obs.ts";
 
 type Corpo = Record<string, unknown>;
+
+let kvLocal: Deno.Kv | null = null;
+async function getKv(): Promise<Deno.Kv> {
+  const kv = obterKv();
+  if (kv) return kv;
+  if (!kvLocal) {
+    kvLocal = await Deno.openKv(env().KV_PATH);
+  }
+  return kvLocal;
+}
 
 class HttpErro extends Error {
   constructor(readonly status: number, mensagem: string) {
@@ -79,10 +96,56 @@ async function existente<T>(envio: Promise<T | null>): Promise<T> {
 
 // ---------- rotas ----------
 
-const rotas: Record<string, (corpo: Corpo) => unknown> = {
+const rotas: Record<string, (corpo: Corpo, req: Request) => unknown> = {
   "GET /": () => ({ mensagem: "Olá" }),
 
   "GET /status": () => ({ ...estado(), metricas: resumo() }),
+
+  "GET /leads": async (_c, req) => {
+    const url = new URL(req.url);
+    const statusParam = url.searchParams.get("status") as StatusLead | null;
+    const limiteStr = url.searchParams.get("limite");
+    const limite = limiteStr ? parseInt(limiteStr, 10) : undefined;
+    const kv = await getKv();
+    const leads = await listarLeads(kv, {
+      status: statusParam ?? undefined,
+      limite,
+    });
+    return { total: leads.length, leads };
+  },
+
+  "GET /leads/resumo": async () => {
+    const kv = await getKv();
+    return await resumoLeads(kv);
+  },
+
+  "GET /leads/exportar": async (_c, req) => {
+    const url = new URL(req.url);
+    const statusParam = url.searchParams.get("status") as StatusLead | null;
+    const formato = url.searchParams.get("formato") ?? "json";
+    const kv = await getKv();
+    const leads = await listarLeads(kv, {
+      status: statusParam === ("todos" as unknown as StatusLead)
+        ? undefined
+        : (statusParam ?? "valido"),
+    });
+    const numeros = leads.map((l) => l.phone);
+    if (formato === "txt") {
+      return new Response(numeros.join("\n"), {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Content-Disposition": `attachment; filename="leads_${
+            statusParam ?? "valido"
+          }.txt"`,
+        },
+      });
+    }
+    return {
+      total: numeros.length,
+      status: statusParam ?? "valido",
+      numeros,
+    };
+  },
 
   "POST /iniciar": (c) =>
     iniciar(c.phone === undefined ? undefined : exigeTelefone(c)),
@@ -92,7 +155,15 @@ const rotas: Record<string, (corpo: Corpo) => unknown> = {
   "POST /logout": async () => ({ deslogado: await logout() }),
 
   "POST /numero-valido": async (c) => {
-    const jid = await numeroValido(exigeTelefone(c));
+    const phone = exigeTelefone(c);
+    const jid = await numeroValido(phone);
+    const kv = await getKv();
+    await salvarOuAtualizarLead(kv, {
+      phone,
+      jid: jid ?? undefined,
+      status: jid ? "valido" : "sem_whatsapp",
+      origem: "numero-valido",
+    });
     return jid ? { existe: true, jid } : { existe: false };
   },
 
@@ -124,11 +195,16 @@ const rotas: Record<string, (corpo: Corpo) => unknown> = {
     const imagem = typeof c.imagem === "string" && c.imagem
       ? c.imagem
       : undefined;
+    const diasCooldown =
+      typeof c.diasCooldown === "number" && c.diasCooldown > 0
+        ? c.diasCooldown
+        : undefined;
     // Executa em segundo plano para não dar timeout HTTP
-    enviarTudo(numeros, texto, env().PASTA_ARQUIVOS, imagem);
+    enviarTudo(numeros, texto, env().PASTA_ARQUIVOS, imagem, diasCooldown);
     return {
       status: "iniciado",
       total: numeros.length,
+      diasCooldown: diasCooldown ?? null,
       mensagem:
         "Envio em lote iniciado em segundo plano com intervalo de segurança (30 a 45s).",
     };
@@ -156,7 +232,9 @@ export async function rota(req: Request): Promise<Response> {
   }
 
   try {
-    return json(await handler(corpo) ?? {});
+    const res = await handler(corpo, req);
+    if (res instanceof Response) return res;
+    return json(res ?? {});
   } catch (e) {
     if (e instanceof HttpErro) return json({ erro: e.message }, e.status);
     if (e instanceof Deno.errors.NotFound) {
