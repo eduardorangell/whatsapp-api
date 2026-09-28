@@ -2,21 +2,30 @@
   "tasks": {
     "dev": "deno run --allow-net --allow-env --allow-read --allow-write --allow-sys --allow-ffi --unstable-kv --unstable-otel --watch src/server.ts",
     "start": "deno run --allow-net --allow-env --allow-read --allow-write --allow-sys --allow-ffi --unstable-kv --unstable-otel src/server.ts",
-    "test": "DENO_ENV=test deno test --allow-net --allow-env --allow-read --allow-sys --unstable-kv",
+    "test": "DENO_ENV=test deno test --allow-net --allow-env --allow-read --allow-write --allow-sys --allow-ffi --unstable-kv",
     "check": "deno fmt --check --ignore=node_modules && deno lint --ignore=node_modules && deno check src/*.ts",
-    "docker:build": "docker compose build",
+    "docker:build": "deno run --allow-run --allow-env scripts/build_docker.ts",
+    "build:docker": "deno run --allow-run --allow-env scripts/build_docker.ts",
+    "docker:build:baileys": "deno run --allow-run --allow-env scripts/build_docker.ts --baileys",
+    "docker:build:wppconnect": "deno run --allow-run --allow-env scripts/build_docker.ts --wppconnect",
     "docker:up": "docker compose up",
     "logs": "docker compose logs -f"
   },
   "imports": {
     "@std/assert": "jsr:@std/assert@1",
-    "@std/fmt": "jsr:@std/fmt@^1.0.10",
-    "baileys": "npm:baileys@7.0.0-rc14",
-    "qrcode-terminal": "npm:qrcode-terminal@^0.12.0",
+    "@std/async": "jsr:@std/async@^1.5.1",
     "@std/encoding": "jsr:@std/encoding@^1",
+    "@std/fmt": "jsr:@std/fmt@^1.0.10",
     "@std/media-types": "jsr:@std/media-types@^1",
-    "@std/path": "jsr:@std/path@^1"
+    "@std/path": "jsr:@std/path@^1",
+    "@wppconnect-team/wppconnect": "npm:@wppconnect-team/wppconnect@^2.3.3",
+    "baileys": "npm:baileys@7.0.0-rc14",
+    "qrcode-terminal": "npm:qrcode-terminal@^0.12.0"
   },
   "nodeModulesDir": "auto",
-  "allowScripts": ["npm:baileys@7.0.0-rc14", "npm:protobufjs@7.6.5"]
+  "allowScripts": [
+    "npm:baileys@7.0.0-rc14",
+    "npm:protobufjs@7.6.5",
+    "npm:puppeteer@24.43.1"
+  ]
 }

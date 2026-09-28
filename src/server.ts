@@ -1,6 +1,5 @@
 // API HTTP em Deno puro: Deno.serve + uma tabela de rotas. Sem framework.
 import {
-  conectar,
   configurarWa,
   desconectar,
   enviarArquivo,
@@ -99,7 +98,7 @@ async function existente<T>(envio: Promise<T | null>): Promise<T> {
 const rotas: Record<string, (corpo: Corpo, req: Request) => unknown> = {
   "GET /": () => ({ mensagem: "Olá" }),
 
-  "GET /status": () => ({ ...estado(), metricas: resumo() }),
+  "GET /status": async () => ({ ...(await estado()), metricas: resumo() }),
 
   "GET /leads": async (_c, req) => {
     const url = new URL(req.url);
@@ -150,7 +149,7 @@ const rotas: Record<string, (corpo: Corpo, req: Request) => unknown> = {
   "POST /iniciar": (c) =>
     iniciar(c.phone === undefined ? undefined : exigeTelefone(c)),
 
-  "POST /fechar": () => ({ finalizado: desconectar() }),
+  "POST /fechar": async () => ({ finalizado: await desconectar() }),
 
   "POST /logout": async () => ({ deslogado: await logout() }),
 
@@ -266,28 +265,39 @@ export async function comObservabilidade(req: Request): Promise<Response> {
 }
 
 if (import.meta.main) {
-  const { PORT, SESSAO, KV_PATH } = env();
+  const { PORT, SESSAO, KV_PATH, PASTA_ARQUIVOS } = env();
   const kv = await Deno.openKv(KV_PATH);
-  configurarWa(kv, SESSAO);
+  configurarWa(kv, SESSAO, PASTA_ARQUIVOS);
 
-  const jaRegistrado = await temSessaoValida(kv, SESSAO);
-  if (jaRegistrado) {
-    log("info", "sessao_existente_reconectando", { sessao: SESSAO });
-    await conectar(kv, SESSAO, { modo: "qr" });
+  const motorEscolhido = Deno.env.get("WA_ENGINE") || "baileys";
+  log("info", "iniciando_servidor", {
+    porta: PORT,
+    motor: motorEscolhido,
+    sessao: SESSAO,
+  });
+
+  if (motorEscolhido === "baileys") {
+    const jaRegistrado = await temSessaoValida(kv, SESSAO);
+    if (jaRegistrado) {
+      log("info", "sessao_existente_reconectando", { sessao: SESSAO });
+      try {
+        await iniciar();
+      } catch (err) {
+        log("erro", "falha_reconectar_inicio", { erro: String(err) });
+      }
+    } else {
+      log("info", "aguardando_iniciar", {
+        sessao: SESSAO,
+        mensagem: "Nenhuma sessão ativa. Chame POST /iniciar para conectar.",
+      });
+    }
   } else {
     log("info", "aguardando_iniciar", {
+      motor: "wppconnect",
       sessao: SESSAO,
-      mensagem: "Nenhuma sessão ativa. Chame POST /iniciar para conectar.",
+      mensagem: "Chame POST /iniciar para conectar o WPPConnect.",
     });
   }
 
-  Deno.serve({
-    port: PORT,
-    onListen: ({ hostname, port }) =>
-      log("info", "servidor_iniciado", {
-        url: `http://${hostname}:${port}`,
-        sessao: SESSAO,
-        kv: KV_PATH ?? "padrão do Deno",
-      }),
-  }, comObservabilidade);
+  Deno.serve({ port: PORT }, comObservabilidade);
 }

@@ -2,10 +2,7 @@ FROM denoland/deno:2.9.5
 
 WORKDIR /app
 
-# Dockerfile padrão (Baileys: leve, ~150MB, sem navegador)
-# Para build do motor WPPConnect, utilize: deno task docker:build --wppconnect
-# ou: docker build -f Dockerfile.wppconnect -t whatsapp-api:wppconnect .
-
+# Imagem leve: Baileys usa WebSocket puro + Signal nativo, sem navegador
 COPY deno.json deno.lock ./
 RUN deno install
 

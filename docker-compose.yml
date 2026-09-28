@@ -1,31 +1,37 @@
 services:
-  whatsapp-baileys:
-    image: whatsapp-baileys:latest
-    build: .
-    container_name: whatsapp-baileys
+  whatsapp:
+    image: whatsapp-api:${WA_ENGINE:-baileys}
+    build:
+      context: .
+      dockerfile: Dockerfile.${WA_ENGINE:-baileys}
+    container_name: whatsapp-api
     ports:
       - "3000:3000"
     volumes:
-      # Sessão do WhatsApp. Apagar = precisar parear de novo.
-      - kv:/data
-      # Arquivos que /enviar-arquivo pode mandar (somente leitura).
+      # Persistência unificada:
+      # - /data/kv.sqlite3 (Leads, Cooldown, Métricas e Auth Baileys)
+      # - /data/tokens (Perfil e tokens Chrome do WPPConnect)
+      - ./data:/data
+      # Arquivos que /enviar-arquivo pode mandar (somente leitura)
       - ./arquivos:/arquivos:ro
     environment:
       - PORT=3000
+      - WA_ENGINE=${WA_ENGINE:-baileys}
       - SESSAO=suporte
-      # Descomente para exportar logs/traces via OpenTelemetry.
-      # O Deno instrumenta o Deno.serve e captura os logs sozinho.
+      - USE_CHROME=true
+      - HEADLESS=true
+      - WPP_TOKENS_DIR=/data/tokens
+      - KV_PATH=/data/kv.sqlite3
+      - PASTA_ARQUIVOS=/arquivos
+      # Descomente para exportar logs/traces via OpenTelemetry:
       # - OTEL_DENO=true
-      # - OTEL_SERVICE_NAME=whatsapp-baileys
+      # - OTEL_SERVICE_NAME=whatsapp-api
       # - OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4318
     restart: unless-stopped
-    # O QR aparece aqui: docker compose up (sem -d) ou docker compose logs -f
+    # O QR Code aparece aqui: docker compose up (sem -d) ou docker compose logs -f
     tty: true
     networks:
       - grupotodanet
-
-volumes:
-  kv:
 
 networks:
   grupotodanet:
