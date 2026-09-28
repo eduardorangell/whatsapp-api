@@ -342,12 +342,10 @@ export class WppConnectEngine implements WhatsAppEngine {
     const dataUri = await resolverImagemParaDataUri(imagem, this.pastaArquivos);
 
     const nomeArquivo = `${crypto.randomUUID()}.jpeg`;
-    const resultado = await this.client.sendImageFromBase64(
-      jid,
-      dataUri,
-      nomeArquivo,
-      legendaFinal,
-    );
+    const resultado = await this.client.sendFile(jid, dataUri, {
+      filename: nomeArquivo,
+      caption: legendaFinal,
+    });
     contadores.enviadas++;
     log("info", "enviado", {
       motor: "wppconnect",
@@ -404,12 +402,10 @@ export class WppConnectEngine implements WhatsAppEngine {
 
     const jid = validacao.jid;
     const caminho = caminhoSeguro(this.pastaArquivos, arquivo);
-    const resultado = await this.client.sendFile(
-      jid,
-      caminho,
-      basename(arquivo),
-      legenda ? resolverSpintax(legenda) : undefined,
-    );
+    const resultado = await this.client.sendFile(jid, caminho, {
+      filename: basename(arquivo),
+      caption: legenda ? resolverSpintax(legenda) : undefined,
+    });
     contadores.enviadas++;
     log("info", "enviado", {
       motor: "wppconnect",
