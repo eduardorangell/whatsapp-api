@@ -140,6 +140,8 @@ export class WppConnectEngine implements WhatsAppEngine {
           "--disable-web-security",
           "--no-sandbox",
           "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-gpu",
           "--disable-features=MacRouters",
           "--aggressive-cache-discard",
           "--disable-cache",

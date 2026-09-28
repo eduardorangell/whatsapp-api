@@ -98,7 +98,7 @@ async function existente<T>(envio: Promise<T | null>): Promise<T> {
 const rotas: Record<string, (corpo: Corpo, req: Request) => unknown> = {
   "GET /": () => ({ mensagem: "Olá" }),
 
-  "GET /status": async () => ({ ...(await estado()), metricas: resumo() }),
+  "GET /status": () => ({ ...(estado()), metricas: resumo() }),
 
   "GET /leads": async (_c, req) => {
     const url = new URL(req.url);

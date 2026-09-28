@@ -2,12 +2,13 @@ FROM denoland/deno:2.9.5
 
 WORKDIR /app
 
-# Instalação do Google Chrome e dependências do Chromium para Puppeteer/WPPConnect
+# Instalação do Google Chrome (amd64) ou Chromium (arm64) e dependências do Puppeteer
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     gnupg \
     ca-certificates \
     fonts-liberation \
+    fonts-noto-color-emoji \
     libasound2 \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
@@ -38,10 +39,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxss1 \
     libxtst6 \
     xdg-utils \
-  && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg \
-  && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
-  && apt-get update \
-  && (apt-get install -y --no-install-recommends google-chrome-stable || apt-get install -y --no-install-recommends chromium) \
+  && ARCH=$(dpkg --print-architecture) \
+  && if [ "$ARCH" = "amd64" ]; then \
+       wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg \
+       && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
+       && apt-get update \
+       && apt-get install -y --no-install-recommends google-chrome-stable; \
+     else \
+       apt-get update \
+       && apt-get install -y --no-install-recommends chromium; \
+     fi \
   && rm -rf /var/lib/apt/lists/*
 
 COPY deno.json deno.lock ./
