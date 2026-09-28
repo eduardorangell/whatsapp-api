@@ -1,20 +1,4 @@
-// Node modules
-node_modules
+node_modules/
 
-// Deno cache
-.cache
-
-//Tokens
-tokens
-
-// Other files
-wpp-api.tar
-
-// macOS files
+tokens/
 .DS_Store
-.AppleDouble
-.LSOverride
-._*
-.Spotlight-V100
-.Trashes
-Icon

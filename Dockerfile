@@ -1,20 +1,33 @@
-FROM denoland/deno
-
-RUN apt-get update \
-    && apt-get install -y wget gnupg \
-    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
-
-EXPOSE 3000
+FROM denoland/deno:2.9.5
 
 WORKDIR /app
 
-COPY . .
+# Sem Chrome, sem fontes, sem apt-get. Era isso que o Puppeteer exigia.
+COPY deno.json deno.lock ./
+RUN deno install
 
-RUN deno cache src/server.ts && deno install --allow-scripts=npm:puppeteer@23.11.1,npm:sharp@0.33.5
+COPY src/ ./src/
 
-CMD ["run", "--allow-net", "--allow-read", "--allow-write", "--allow-env", "--allow-sys", "--allow-ffi", "--allow-run", "src/server.ts"]
+# KV_PATH aponta pro volume: é o único lugar que precisa de escrita.
+ENV KV_PATH=/data/kv.sqlite3
+ENV PASTA_ARQUIVOS=/arquivos
+EXPOSE 3000
+
+# /status responde 200 mesmo desconectado do WhatsApp — é a saúde do processo,
+# não da sessão. Para a sessão, olhe o campo "online" na resposta.
+# `deno eval` já roda com permissões, não aceita --allow-*. A imagem não tem curl.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD ["deno", "eval", \
+    "const r = await fetch('http://localhost:3000/status'); Deno.exit(r.ok ? 0 : 1)"]
+
+# --unstable-otel fica ligado sempre, mas só age com OTEL_DENO=true.
+CMD ["run", \
+  "--allow-net", \
+  "--allow-env", \
+  "--allow-read", \
+  "--allow-sys", \
+  "--allow-ffi", \
+  "--allow-write=/data,/tmp", \
+  "--unstable-kv", \
+  "--unstable-otel", \
+  "src/server.ts"]
